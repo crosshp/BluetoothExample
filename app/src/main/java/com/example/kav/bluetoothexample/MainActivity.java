@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -26,6 +27,8 @@ public class MainActivity extends AppCompatActivity {
     static final String ADDRESS_INTENT = "ADDRESS";
     static final String RSSI_INTENT = "RSSI";
     static final String INTENT_FILTER_RSSI = "INTENT_FILTER_RSSI";
+    static final String PROGRESS_BAR_STATUS = "PROGRESS_BAR_STATUS";
+    static final String POWER_COUNT = "POWER_COUNT";
     static int notificationID = 0;
     private static final int REQUEST_ENABLE_BT = 0;
     private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 0;
@@ -44,11 +47,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         initializeViewComponents();
         checkBluetooth();
         if (checkPermissions()) return;
-
-
     }
 
     private void initializeViewComponents() {
@@ -111,6 +113,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    double getDistance(int rssi, int txPower) {
+    /*
+     * RSSI = TxPower - 10 * n * lg(d)
+     * n = 2 (in free space)
+     *
+     * d = 10 ^ ((TxPower - RSSI) / (10 * n))
+     */
+
+        return Math.pow(10d, ((double) txPower - rssi) / (10 * 2));
+    }
+
     private void startScanService() {
         Intent intent = new Intent(this, ScanService.class);
         startService(intent);
@@ -149,9 +162,15 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("recieve", "here");
                 int rssi = intent.getIntExtra(RSSI_INTENT, 0);
                 String address = intent.getStringExtra(ADDRESS_INTENT);
+                boolean progressBarStatus = intent.getBooleanExtra(PROGRESS_BAR_STATUS, true);
+                int power = intent.getIntExtra(POWER_COUNT, 0);
                 rssiText.setText(String.valueOf(rssi));
                 addressText.setText(address);
-                distanceText.setText(String.valueOf(calculateDistance(1, (double) rssi)));
+                distanceText.setText(String.valueOf(getDistance(rssi, power)));
+                if (!progressBarStatus) {
+                    progressBar.setVisibility(View.GONE);
+                    stopScanService();
+                }
             }
         };
         IntentFilter filter = new IntentFilter();
