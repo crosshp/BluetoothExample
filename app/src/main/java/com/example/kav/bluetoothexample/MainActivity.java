@@ -12,13 +12,16 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,6 +32,9 @@ public class MainActivity extends AppCompatActivity {
     static final String INTENT_FILTER_RSSI = "INTENT_FILTER_RSSI";
     static final String PROGRESS_BAR_STATUS = "PROGRESS_BAR_STATUS";
     static final String POWER_COUNT = "POWER_COUNT";
+    static final String TIME_DELAY = "TIME_DELAY";
+    static final String RSSI_DISTANCE_ACTION = "RSSI_DISTANCE_ACTION";
+    static final String RSSI_DISTANCE = "RSSI_DISTANCE";
     static int notificationID = 0;
     private static final int REQUEST_ENABLE_BT = 0;
     private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 0;
@@ -38,9 +44,14 @@ public class MainActivity extends AppCompatActivity {
     Button stopScanButton = null;
     TextView addressText = null;
     TextView rssiText = null;
+    TextView powerText = null;
     TextView distanceText = null;
     ProgressBar progressBar = null;
+    TextView distanceDelay = null;
+    SeekBar sliderDistance = null;
+    EditText editRSSI = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
+    private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -50,7 +61,31 @@ public class MainActivity extends AppCompatActivity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         initializeViewComponents();
         checkBluetooth();
-        if (checkPermissions()) return;
+        goToBluetoothRequestPermission();
+
+
+    }
+
+    private void goToBluetoothRequestPermission() {
+        int hasPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
+        if (hasPermission == PackageManager.PERMISSION_GRANTED) {
+            initializeButtonClick(startScanButton, stopScanButton);
+            return;
+        }
+        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_BLUETOOTH_PERMISSION);
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_BLUETOOTH_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                initializeButtonClick(startScanButton, stopScanButton);
+        } else {
+            Toast.makeText(this, "Not acsess!",
+                    Toast.LENGTH_LONG).show();
+            initializeButtonClick(startScanButton, stopScanButton);
+        }
     }
 
     private void initializeViewComponents() {
@@ -59,28 +94,38 @@ public class MainActivity extends AppCompatActivity {
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         progressBar.setVisibility(View.GONE);
         rssiText = (TextView) findViewById(R.id.textRssi);
+        powerText = (TextView) findViewById(R.id.textPower);
         addressText = (TextView) findViewById(R.id.textAddress);
         distanceText = (TextView) findViewById(R.id.textDistance);
+        distanceDelay = (TextView) findViewById(R.id.valueDistance);
+        sliderDistance = (SeekBar) findViewById(R.id.sliderDistance);
+        editRSSI = (EditText) findViewById(R.id.editRSSI);
+        sliderDistance.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                distanceDelay.setText(String.valueOf(progress * 0.5) + "m");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
-    private boolean checkPermissions() {
-        int hasPermission = ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION);
-        if (hasPermission == PackageManager.PERMISSION_GRANTED) {
-            initializeButtonClick(startScanButton, stopScanButton);
-            return true;
-        }
-        ActivityCompat.requestPermissions(MainActivity.this,
-                new String[]{
-                        Manifest.permission.ACCESS_COARSE_LOCATION},
-                REQUEST_COARSE_LOCATION_PERMISSIONS);
-        return false;
-    }
 
     private void initializeButtonClick(Button startScanButton, Button stopScanButton) {
         if (startScanButton != null) {
             startScanButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    //    BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
+                    //    BluetoothScannerSingleton.getInstance().startScan(bluetoothManager);
                     startScanService();
                     progressBar.setVisibility(View.VISIBLE);
                 }
@@ -91,27 +136,14 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     stopScanService();
+                    //     BluetoothScannerSingleton.getInstance().stopScan();
+                    sliderDistance.setProgress(0);
                     progressBar.setVisibility(View.GONE);
                 }
             });
         }
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case REQUEST_COARSE_LOCATION_PERMISSIONS: {
-                if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    initializeButtonClick(startScanButton, stopScanButton);
-                } else {
-                    Toast.makeText(this, "Not acsess!",
-                            Toast.LENGTH_LONG).show();
-                    initializeButtonClick(startScanButton, stopScanButton);
-                }
-                return;
-            }
-        }
-    }
 
     double getDistance(int rssi, int txPower) {
     /*
@@ -126,6 +158,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void startScanService() {
         Intent intent = new Intent(this, ScanService.class);
+        if (editRSSI.length() != 0) {
+            intent.putExtra(RSSI_DISTANCE, Integer.valueOf(editRSSI.getText().toString()));
+        }
+        editRSSI.setEnabled(false);
         startService(intent);
         if (broadcastReceiverForGetRSSI == null) {
             registerBroadcastReceiver();
@@ -133,8 +169,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopScanService() {
-        Intent intent = new Intent(this, ScanService.class);
+        final Intent intent = new Intent(this, ScanService.class);
         stopService(intent);
+        editRSSI.setEnabled(true);
         if (broadcastReceiverForGetRSSI != null) {
             unregisterReceiver(broadcastReceiverForGetRSSI);
             broadcastReceiverForGetRSSI = null;
@@ -166,6 +203,7 @@ public class MainActivity extends AppCompatActivity {
                 int power = intent.getIntExtra(POWER_COUNT, 0);
                 rssiText.setText(String.valueOf(rssi));
                 addressText.setText(address);
+                powerText.setText(String.valueOf(power));
                 distanceText.setText(String.valueOf(getDistance(rssi, power)));
                 if (!progressBarStatus) {
                     progressBar.setVisibility(View.GONE);

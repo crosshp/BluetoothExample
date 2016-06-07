@@ -12,12 +12,12 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,150 +30,92 @@ public class ScanService extends Service {
     BluetoothAdapter bluetoothAdapter = null;
     BluetoothLeScanner bluetoothLeScanner = null;
     ScanCallback scanCallBack = null;
-    final int distanceHigh = -55;
-    final int distanceMedium = -65;
-    final int distanceLow = -80;
+    int distanceHigh = -55;
+    final int delayToScanResult = 450;
     String beaconAddress = "20:C3:8F:FF:54:BC";
+    Intent intent = null;
 
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
 
     @Override
-    public void onCreate() {
-        super.onCreate();
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        this.intent = intent;
+        distanceHigh = intent.getIntExtra(MainActivity.RSSI_DISTANCE, 55);
+        distanceHigh *= -1;
         startScan();
+
+
+        return super.onStartCommand(intent, flags, startId);
+
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void startScan() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
-        scanInHighLevel(bluetoothLeScanner);
+        scanInLowMode(bluetoothLeScanner);
     }
+
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void scanInLowMode(final BluetoothLeScanner bluetoothLeScanner) {
-        ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER).build();
         scanCallBack = new ScanCallback() {
-            @Override
-            public void onScanResult(int callbackType, ScanResult result) {
-                Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
-                intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
-                intent.putExtra(MainActivity.RSSI_INTENT, result.getRssi());
-                intent.putExtra(MainActivity.POWER_COUNT, result.getScanRecord().getTxPowerLevel());
-                sendBroadcast(intent);
-                Log.e("Scan", "Low");
-                Log.e("Scan result", result.getDevice().getAddress() + "\nrssi = " + result.getRssi());
-                if (result.getDevice().getAddress().equals(beaconAddress) && (result.getRssi() > distanceLow)) {
-                    bluetoothLeScanner.stopScan(this);
-                    scanInMediumLevel(bluetoothLeScanner);
-                }
-            }
+            private boolean isFirstThread = true;
+            private boolean isShowNotification = false;
+            Handler handler = new Handler();
+            List<ScanResult> scanResults = new ArrayList<>();
 
             @Override
-            public void onBatchScanResults(List<ScanResult> results) {
-                Log.e("Scan", "Batch");
-                for (ScanResult scanResult : results) {
-                    Log.e("Batch", scanResult.getDevice().getAddress());
-                }
-            }
-            @Override
-            public void onScanFailed(int errorCode) {
-                Log.e("Scan", "Failed Low");
-                Toast.makeText(getBaseContext(),"Error Scanning in Low Level",Toast.LENGTH_LONG).show();
+            public void onScanResult(int callbackType, final ScanResult result) {
+                if (result.getDevice().getAddress().equals(beaconAddress))
+                    scanResults.add(result);
+                final Runnable delayScan = new Runnable() {
+                    @Override
+                    public void run() {
+                        synchronized (this) {
+                            int sumRssi = 0;
+                            for (ScanResult result : scanResults) {
+                                sumRssi += result.getRssi();
+                            }
+                            Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
+                            int averageRssi = sumRssi / scanResults.size();
+                            if (result.getDevice().getAddress().equals(beaconAddress) && (averageRssi > distanceHigh)) {
+                                Log.e("ScanCallBack", "Device found!!!");
+                                    sendNotification(result);
+                            //    intent.putExtra(MainActivity.PROGRESS_BAR_STATUS, false);
+
+                            }
+                            intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
+                            intent.putExtra(MainActivity.RSSI_INTENT, (Integer) averageRssi);
+                            intent.putExtra(MainActivity.POWER_COUNT, (Integer) result.getScanRecord().getTxPowerLevel());
+                            sendBroadcast(intent);
+
+                            Log.e("ScanCallBack", "Average RSSI = " + String.valueOf(averageRssi)
+                                    + "\nDevice address = " + result.getDevice().getAddress()
+                                    + "\nDevice name = " + result.getDevice().getName());
+
+                            isFirstThread = true;
+                            handler.removeCallbacks(this);
+                            scanResults.clear();
+                        }
+                    }
+                };
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        synchronized (this) {
+                            if (isFirstThread) {
+                                isFirstThread = false;
+                                handler.postDelayed(delayScan, delayToScanResult);
+                            }
+                        }
+                    }
+                }).start();
             }
         };
+        ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER).build();
         this.bluetoothLeScanner.startScan(new ArrayList<ScanFilter>(), scanSettings, scanCallBack);
     }
 
-
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public void scanInMediumLevel(final BluetoothLeScanner bluetoothLeScanner) {
-        ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_BALANCED).build();
-        scanCallBack = new ScanCallback() {
-            @Override
-            public void onScanResult(int callbackType, ScanResult result) {
-                Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
-                intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
-                intent.putExtra(MainActivity.RSSI_INTENT, result.getRssi());
-                intent.putExtra(MainActivity.POWER_COUNT, result.getScanRecord().getTxPowerLevel());
-                sendBroadcast(intent);
-                Log.e("Scan", "Medium");
-                Log.e("Scan result", result.getDevice().getAddress() + "\nrssi = " + result.getRssi());
-                if (result.getDevice().getAddress().equals(beaconAddress) && (result.getRssi() > distanceMedium)) {
-                    bluetoothLeScanner.stopScan(this);
-                    scanInHighLevel(bluetoothLeScanner);
-                } else if (result.getDevice().getAddress().equals(beaconAddress) && (result.getRssi() < distanceMedium)) {
-                    bluetoothLeScanner.stopScan(this);
-                    scanInLowMode(bluetoothLeScanner);
-                }
-            }
-
-            @Override
-            public void onBatchScanResults(List<ScanResult> results) {
-                Log.e("Scan", "Batch");
-                for (ScanResult scanResult : results) {
-                    Log.e("Batch", scanResult.getDevice().getAddress());
-                }
-            }
-            @Override
-            public void onScanFailed(int errorCode) {
-                Log.e("Scan", "Failed Medium");
-                Toast.makeText(getBaseContext(),"Error Scanning in Medium Level",Toast.LENGTH_LONG).show();
-
-            }
-        };
-        bluetoothLeScanner.startScan(new ArrayList<ScanFilter>(), scanSettings, scanCallBack);
-    }
-
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public void scanInHighLevel(final BluetoothLeScanner bluetoothLeScanner) {
-        ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
-        scanCallBack = new ScanCallback() {
-            @Override
-            public void onScanResult(int callbackType, ScanResult result) {
-                Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
-                intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
-                intent.putExtra(MainActivity.RSSI_INTENT, result.getRssi());
-                intent.putExtra(MainActivity.POWER_COUNT, result.getScanRecord().getTxPowerLevel());
-                sendBroadcast(intent);
-                Log.e("Scan", "High");
-                Log.e("Scan result", result.getDevice().getAddress() + "\nrssi = " + result.getRssi());
-                if (result.getDevice().getAddress().equals(beaconAddress) && (result.getRssi() > distanceHigh)) {
-                    sendNotification(result);
-                    bluetoothLeScanner.stopScan(this);
-                } else {
-                    if (result.getDevice().getAddress().equals(beaconAddress) && (result.getRssi() < distanceLow)) {
-                        bluetoothLeScanner.stopScan(this);
-                        scanInLowMode(bluetoothLeScanner);
-                    } else if (result.getDevice().getAddress().equals(beaconAddress) && (result.getRssi() < distanceMedium)) {
-                        bluetoothLeScanner.stopScan(this);
-                        scanInMediumLevel(bluetoothLeScanner);
-                    }
-                }
-            }
-            @Override
-            public void onBatchScanResults(List<ScanResult> results) {
-                Log.e("Scan", "Batch");
-                for (ScanResult scanResult : results) {
-                    Log.e("Batch", scanResult.getDevice().getAddress());
-                }
-            }
-
-            @Override
-            public void onScanFailed(int errorCode) {
-                Log.e("Scan", "Failed High");
-                Toast.makeText(getBaseContext(),"Error Scanning in High Level",Toast.LENGTH_LONG).show();
-            }
-        };
-        bluetoothLeScanner.startScan(new ArrayList<ScanFilter>(), scanSettings, scanCallBack);
-    }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void sendNotification(ScanResult result) {
@@ -184,10 +126,10 @@ public class ScanService extends Service {
         notificationCompatBuilder.setContentInfo(result.getDevice().getAddress());
         NotificationManagerCompat.from(getBaseContext()).notify("Tag", MainActivity.notificationID, notificationCompatBuilder.build());
         Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
-        intent.putExtra(MainActivity.ADDRESS_INTENT, "0");
-        intent.putExtra(MainActivity.RSSI_INTENT, 0);
+        intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
+        intent.putExtra(MainActivity.RSSI_INTENT, (Integer) result.getRssi());
+        intent.putExtra(MainActivity.POWER_COUNT, (Integer) result.getScanRecord().getTxPowerLevel());
         intent.putExtra(MainActivity.PROGRESS_BAR_STATUS, false);
-        sendBroadcast(intent);
         MainActivity.notificationID++;
     }
 
@@ -210,5 +152,11 @@ public class ScanService extends Service {
             bluetoothLeScanner = null;
         }
         super.onDestroy();
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 }
