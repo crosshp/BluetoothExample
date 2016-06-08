@@ -16,14 +16,20 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
+
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -47,23 +53,29 @@ public class MainActivity extends AppCompatActivity {
     TextView powerText = null;
     TextView distanceText = null;
     ProgressBar progressBar = null;
-    TextView distanceDelay = null;
-    SeekBar sliderDistance = null;
+    Button buttonBigGraph = null;
     EditText editRSSI = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
+    private static int indexGraph = 0;
+    GraphView graph = null;
+    LineGraphSeries<DataPoint> series = null;
+    long startOfScanTime = 0;
+    DataPoint[] generateData = new DataPoint[]{
+    };
+    private LineGraphSeries<DataPoint> mSeries2;
+
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        indexGraph = 0;
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         initializeViewComponents();
         checkBluetooth();
         goToBluetoothRequestPermission();
-
-
     }
 
     private void goToBluetoothRequestPermission() {
@@ -92,30 +104,30 @@ public class MainActivity extends AppCompatActivity {
         startScanButton = (Button) findViewById(R.id.buttonStartScan);
         stopScanButton = (Button) findViewById(R.id.buttonStopScan);
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
-        progressBar.setVisibility(View.GONE);
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+        }
         rssiText = (TextView) findViewById(R.id.textRssi);
         powerText = (TextView) findViewById(R.id.textPower);
         addressText = (TextView) findViewById(R.id.textAddress);
         distanceText = (TextView) findViewById(R.id.textDistance);
-        distanceDelay = (TextView) findViewById(R.id.valueDistance);
-        sliderDistance = (SeekBar) findViewById(R.id.sliderDistance);
         editRSSI = (EditText) findViewById(R.id.editRSSI);
-        sliderDistance.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        graph = (GraphView) findViewById(R.id.graphView);
+        mSeries2 = new LineGraphSeries<DataPoint>(generateData);
+        buttonBigGraph = (Button) findViewById(R.id.buttonBigGraph);
+        buttonBigGraph.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                distanceDelay.setText(String.valueOf(progress * 0.5) + "m");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
+            public void onClick(View v) {
+                Intent intent = new Intent(getBaseContext(), GraphActivity.class);
+                startActivity(intent);
             }
         });
+        graph.addSeries(mSeries2);
+        graph.getViewport().setMinY(-100);
+        graph.getViewport().setMaxY(-45);
+        graph.getViewport().setYAxisBoundsManual(true);
+        graph.getViewport().setScrollable(true);
+        graph.getViewport().setScalable(true);
     }
 
 
@@ -137,7 +149,6 @@ public class MainActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     stopScanService();
                     //     BluetoothScannerSingleton.getInstance().stopScan();
-                    sliderDistance.setProgress(0);
                     progressBar.setVisibility(View.GONE);
                 }
             });
@@ -163,15 +174,20 @@ public class MainActivity extends AppCompatActivity {
         }
         editRSSI.setEnabled(false);
         startService(intent);
+        Calendar calendar = Calendar.getInstance();
+        startOfScanTime = calendar.getTimeInMillis();
         if (broadcastReceiverForGetRSSI == null) {
             registerBroadcastReceiver();
         }
+
     }
+
 
     private void stopScanService() {
         final Intent intent = new Intent(this, ScanService.class);
         stopService(intent);
         editRSSI.setEnabled(true);
+        mSeries2.resetData(generateData);
         if (broadcastReceiverForGetRSSI != null) {
             unregisterReceiver(broadcastReceiverForGetRSSI);
             broadcastReceiverForGetRSSI = null;
@@ -209,6 +225,12 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                     stopScanService();
                 }
+                Calendar calendar = Calendar.getInstance();
+                mSeries2.appendData(new DataPoint((calendar.getTimeInMillis() - startOfScanTime), rssi), false, 50000);
+                /*graph.getViewport().setScalable(true);
+                graph.getViewport().setScrollable(true);*/
+                indexGraph++;
+
             }
         };
         IntentFilter filter = new IntentFilter();

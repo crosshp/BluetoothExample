@@ -1,12 +1,14 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@drawable/white_circle"
         android:orientation="vertical">
+
 
         <ImageView
             android:id="@+id/imageView"
@@ -16,15 +18,22 @@
             android:layout_weight="0.28"
             android:src="@drawable/wave_bluetooth" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+        <com.jjoe64.graphview.GraphView
+            android:id="@+id/graphView"
+            app:seriesColor="#ee0000"
+            android:layout_width="match_parent"
+            app:seriesType="line"
+            android:layout_height="400dip" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+
+        <Button
+            android:layout_width="197dp"
+            android:layout_height="wrap_content"
+            android:text="Расширеный график"
+            android:id="@+id/buttonBigGraph"
+            android:layout_gravity="center_horizontal"
+            android:background="@color/colorPrimary"
+            android:textColor="@android:color/white" />
 
         <ProgressBar
             android:id="@+id/progressBar"
@@ -132,59 +141,35 @@
             android:textAppearance="?android:attr/textAppearanceMedium" />
 
         <TextView
-            android:id="@+id/valueDistance"
+            android:id="@+id/textView2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_weight="0.28"
-            android:text="0m"
+            android:text="RSSI сработки"
             android:textAppearance="?android:attr/textAppearanceLarge" />
 
-        <SeekBar
-            android:id="@+id/sliderDistance"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:layout_marginRight="10dp"
-            android:layout_weight="0.28"
-            android:max="4" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="RSSI сработки"
-            android:id="@+id/textView2"
-            android:layout_gravity="center_horizontal"
-            android:layout_weight="0.28" />
-
         <EditText
+            android:id="@+id/editRSSI"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number"
-            android:ems="10"
-            android:id="@+id/editRSSI"
             android:layout_gravity="center_horizontal"
-            android:layout_weight="0.28" />
+            android:layout_marginBottom="40dp"
+            android:layout_marginLeft="50dp"
+            android:layout_marginRight="50dp"
+            android:ems="10"
+            android:inputType="number" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
 
         <Button
             android:id="@+id/buttonStartScan"
             android:layout_width="189dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="20dp"
             android:background="@color/colorPrimary"
             android:text="@string/start_scan"
             android:textColor="@android:color/white" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
 
         <Button
             android:id="@+id/buttonStopScan"
@@ -200,4 +185,4 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
     </LinearLayout>
-    </ScrollView>
+</ScrollView>

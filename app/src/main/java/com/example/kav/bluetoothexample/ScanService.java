@@ -12,8 +12,8 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
+import android.os.ParcelUuid;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
@@ -21,6 +21,7 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by kav on 16/06/02.
@@ -30,11 +31,14 @@ public class ScanService extends Service {
     BluetoothAdapter bluetoothAdapter = null;
     BluetoothLeScanner bluetoothLeScanner = null;
     ScanCallback scanCallBack = null;
-    int distanceHigh = -55;
+    int distanceHigh = -69;
     final int delayToScanResult = 450;
     String beaconAddress = "20:C3:8F:FF:54:BC";
+    String UUID_1 = "0000ffe0-0000-1000-8000-00805f9b34fb";
+    String UUID_2 = "0000ffe0-0000-1000-8000-00805f9b34fb";
+    String UUID_3 = "0000ffe0-0000-1000-8000-00805f9b34fb";
+    String[] systemUUIDs = new String[]{UUID_1, UUID_2, UUID_3};
     Intent intent = null;
-
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -57,65 +61,49 @@ public class ScanService extends Service {
 
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void scanInLowMode(final BluetoothLeScanner bluetoothLeScanner) {
+    private void scanInLowMode(BluetoothLeScanner bluetoothLeScanner) {
         scanCallBack = new ScanCallback() {
-            private boolean isFirstThread = true;
-            private boolean isShowNotification = false;
-            Handler handler = new Handler();
-            List<ScanResult> scanResults = new ArrayList<>();
-
             @Override
             public void onScanResult(int callbackType, final ScanResult result) {
-                if (result.getDevice().getAddress().equals(beaconAddress))
-                    scanResults.add(result);
-                final Runnable delayScan = new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (this) {
-                            int sumRssi = 0;
-                            for (ScanResult result : scanResults) {
-                                sumRssi += result.getRssi();
-                            }
-                            Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
-                            int averageRssi = sumRssi / scanResults.size();
-                            if (result.getDevice().getAddress().equals(beaconAddress) && (averageRssi > distanceHigh)) {
-                                Log.e("ScanCallBack", "Device found!!!");
-                                    sendNotification(result);
-                            //    intent.putExtra(MainActivity.PROGRESS_BAR_STATUS, false);
-
-                            }
-                            intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
-                            intent.putExtra(MainActivity.RSSI_INTENT, (Integer) averageRssi);
-                            intent.putExtra(MainActivity.POWER_COUNT, (Integer) result.getScanRecord().getTxPowerLevel());
-                            sendBroadcast(intent);
-
-                            Log.e("ScanCallBack", "Average RSSI = " + String.valueOf(averageRssi)
-                                    + "\nDevice address = " + result.getDevice().getAddress()
-                                    + "\nDevice name = " + result.getDevice().getName());
-
-                            isFirstThread = true;
-                            handler.removeCallbacks(this);
-                            scanResults.clear();
-                        }
+                int i = 0;
+                List<ParcelUuid> uuids = result.getScanRecord().getServiceUuids();
+                for (ParcelUuid uuid : uuids) {
+                    Log.e("UUID" + i, uuid.getUuid().toString());
+                    i++;
+                }
+                if (hasSystemUUID(uuids)) {
+                    Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
+                    if (result.getRssi() > distanceHigh) {
+                        Log.e("ScanCallBack", "Device found!!!");
+                        sendNotification(result);
                     }
-                };
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (this) {
-                            if (isFirstThread) {
-                                isFirstThread = false;
-                                handler.postDelayed(delayScan, delayToScanResult);
-                            }
-                        }
-                    }
-                }).start();
+                    intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
+                    intent.putExtra(MainActivity.RSSI_INTENT, (Integer) result.getRssi());
+                    intent.putExtra(MainActivity.POWER_COUNT, (Integer) result.getScanRecord().getTxPowerLevel());
+                    sendBroadcast(intent);
+
+                    Log.e("ScanCallBack", "Average RSSI = " + String.valueOf(result.getRssi())
+                            + "\nDevice address = " + result.getDevice().getAddress()
+                            + "\nDevice name = " + result.getDevice().getName());
+
+
+                }
             }
         };
         ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_POWER).build();
-        this.bluetoothLeScanner.startScan(new ArrayList<ScanFilter>(), scanSettings, scanCallBack);
+        bluetoothLeScanner.startScan(new ArrayList<ScanFilter>(), scanSettings, scanCallBack);
     }
 
+    private boolean hasSystemUUID(List<ParcelUuid> uuids) {
+        for (ParcelUuid uuid : uuids) {
+            for (String systemUUID : systemUUIDs) {
+                if (uuid.getUuid().toString().equals(systemUUID)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void sendNotification(ScanResult result) {
