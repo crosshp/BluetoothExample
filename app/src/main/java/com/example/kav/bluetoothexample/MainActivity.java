@@ -28,22 +28,18 @@ import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
     static final String ADDRESS_INTENT = "ADDRESS";
+    static final String NAME_INTENT = "NAME_INTENT";
     static final String RSSI_INTENT = "RSSI";
     static final String INTENT_FILTER_RSSI = "INTENT_FILTER_RSSI";
     static final String PROGRESS_BAR_STATUS = "PROGRESS_BAR_STATUS";
     static final String POWER_COUNT = "POWER_COUNT";
-    static final String TIME_DELAY = "TIME_DELAY";
-    static final String RSSI_DISTANCE_ACTION = "RSSI_DISTANCE_ACTION";
     static final String RSSI_DISTANCE = "RSSI_DISTANCE";
     static int notificationID = 0;
     private static final int REQUEST_ENABLE_BT = 0;
-    private static final int REQUEST_COARSE_LOCATION_PERMISSIONS = 0;
     BluetoothAdapter bluetoothAdapter = null;
     final String UUID = "00001800-0000-1000-8000-00805f9b34fb";
     Button startScanButton = null;
@@ -57,13 +53,7 @@ public class MainActivity extends AppCompatActivity {
     EditText editRSSI = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
-    private static int indexGraph = 0;
-    GraphView graph = null;
-    LineGraphSeries<DataPoint> series = null;
     long startOfScanTime = 0;
-    DataPoint[] generateData = new DataPoint[]{
-    };
-    private LineGraphSeries<DataPoint> mSeries2;
 
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -71,11 +61,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        indexGraph = 0;
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
+        startService(intentStartGyro);
         initializeViewComponents();
         checkBluetooth();
         goToBluetoothRequestPermission();
+
     }
 
     private void goToBluetoothRequestPermission() {
@@ -112,8 +104,6 @@ public class MainActivity extends AppCompatActivity {
         addressText = (TextView) findViewById(R.id.textAddress);
         distanceText = (TextView) findViewById(R.id.textDistance);
         editRSSI = (EditText) findViewById(R.id.editRSSI);
-        graph = (GraphView) findViewById(R.id.graphView);
-        mSeries2 = new LineGraphSeries<DataPoint>(generateData);
         buttonBigGraph = (Button) findViewById(R.id.buttonBigGraph);
         buttonBigGraph.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -122,12 +112,6 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-        graph.addSeries(mSeries2);
-        graph.getViewport().setMinY(-100);
-        graph.getViewport().setMaxY(-45);
-        graph.getViewport().setYAxisBoundsManual(true);
-        graph.getViewport().setScrollable(true);
-        graph.getViewport().setScalable(true);
     }
 
 
@@ -187,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
         final Intent intent = new Intent(this, ScanService.class);
         stopService(intent);
         editRSSI.setEnabled(true);
-        mSeries2.resetData(generateData);
         if (broadcastReceiverForGetRSSI != null) {
             unregisterReceiver(broadcastReceiverForGetRSSI);
             broadcastReceiverForGetRSSI = null;
@@ -225,12 +208,6 @@ public class MainActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                     stopScanService();
                 }
-                Calendar calendar = Calendar.getInstance();
-                mSeries2.appendData(new DataPoint((calendar.getTimeInMillis() - startOfScanTime), rssi), false, 50000);
-                /*graph.getViewport().setScalable(true);
-                graph.getViewport().setScrollable(true);*/
-                indexGraph++;
-
             }
         };
         IntentFilter filter = new IntentFilter();
@@ -355,6 +332,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
+        stopService(intentStartGyro);
         super.onDestroy();
 
     }

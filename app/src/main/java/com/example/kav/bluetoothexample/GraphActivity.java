@@ -11,6 +11,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 
 import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.LegendRenderer;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
@@ -57,6 +58,8 @@ public class GraphActivity extends AppCompatActivity {
         graph.getViewport().setYAxisBoundsManual(true);
         graph.getViewport().setScrollable(true);
         graph.getViewport().setScalable(true);
+        graph.getLegendRenderer().setVisible(true);
+        graph.getLegendRenderer().setFixedPosition(30,30);
         startOfScanTime = Calendar.getInstance().getTimeInMillis();
         registerBroadcastReceiver();
     }
@@ -68,7 +71,8 @@ public class GraphActivity extends AppCompatActivity {
                 int rssi = intent.getIntExtra(RSSI_INTENT, 0);
                 Calendar calendar = Calendar.getInstance();
                 String address = intent.getStringExtra(MainActivity.ADDRESS_INTENT);
-                reDrawGraph(address, calendar.getTimeInMillis() - startOfScanTime, rssi);
+                String name = intent.getStringExtra(MainActivity.NAME_INTENT);
+                reDrawGraph(address, name, calendar.getTimeInMillis() - startOfScanTime, rssi);
             }
         };
         IntentFilter filter = new IntentFilter();
@@ -76,16 +80,19 @@ public class GraphActivity extends AppCompatActivity {
         registerReceiver(broadcastReceiverForGetRSSI, filter);
     }
 
-    public void reDrawGraph(String address, long time, int rssi) {
+    public void reDrawGraph(String address, String name, long time, int rssi) {
         LineGraphSeries<DataPoint> series = mapSeries.get(address);
         if (series != null) {
+            series.setColor(colorMap.get(address));
             series.appendData(new DataPoint(time, rssi), false, 50000);
         } else {
             series = new LineGraphSeries<DataPoint>(generateData);
             series.resetData(generateData);
+            colorMap.put(address, colors.get(0));
             series.setColor(colors.get(0));
             colors.remove((int) 0);
             series.appendData(new DataPoint(time, rssi), false, 50000);
+            series.setTitle(name);
             mapSeries.put(address, series);
             graph.addSeries(series);
         }
