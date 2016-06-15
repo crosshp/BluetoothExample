@@ -22,8 +22,12 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".ScanService" />
-        <service android:name=".ListenGyroService" />
+        <service
+            android:name=".ScanService"
+            android:enabled="true" />
+        <service
+            android:name=".ListenGyroService"
+            android:enabled="true" />
 
         <activity android:name=".GraphActivity" />
     </application>

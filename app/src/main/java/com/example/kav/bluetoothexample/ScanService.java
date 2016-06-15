@@ -9,10 +9,7 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -35,51 +32,29 @@ public class ScanService extends Service {
     BluetoothLeScanner bluetoothLeScanner = null;
     ScanCallback scanCallBack = null;
     int distanceHigh = -65;
-    String UUID_1 = "0000ffe0-0000-1000-8000-00805f9b34fb";
-    String UUID_2 = "0000ffe0-0000-1000-8000-00805f9b34fb";
-    String UUID_3 = "0000ffe0-0000-1000-8000-00805f9b34fb";
-    String[] systemUUIDs = new String[]{UUID_1, UUID_2, UUID_3};
-    BroadcastReceiver gyroScopeReceiver = null;
+    String SYSTEM_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb";
+    String[] systemUUIDs = new String[]{SYSTEM_UUID};
     Map<String, List<Integer>> resultsRssiMap = new HashMap<>();
     int rssiSwimWindow = 0;
     int delayScan = 5000;
 
-    public void registerScreenReceiver() {
-        if (gyroScopeReceiver == null) {
-            gyroScopeReceiver = new BroadcastReceiver() {
-                @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    if (bluetoothLeScanner != null)
-                        bluetoothLeScanner.stopScan(scanCallBack);
-                    scanInHighMode(bluetoothLeScanner);
-                    Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            onDestroy();
-                        }
-                    }, delayScan);
-                }
-            };
-        }
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(ListenGyroService.GYRO_WAKE_UP_ACTION);
-        registerReceiver(gyroScopeReceiver, intentFilter);
-
-    }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null) {
-            distanceHigh = intent.getIntExtra(MainActivity.RSSI_DISTANCE, 55);
-            distanceHigh *= -1;
-        }
         initCallBack();
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
-        registerScreenReceiver();
+        if (bluetoothLeScanner != null)
+            bluetoothLeScanner.stopScan(scanCallBack);
+        scanInHighMode(bluetoothLeScanner);
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                stopService(new Intent(ScanService.this, ScanService.class));
+            }
+        }, delayScan);
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -118,7 +93,7 @@ public class ScanService extends Service {
                         if (rssiSwimWindow > distanceHigh) {
                             Log.e("ScanCallBack", "Device found!!!");
                             sendNotification(result);
-                            onDestroy();
+                            stopService(new Intent(ScanService.this, ScanService.class));
                         }
                         intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
                         intent.putExtra(MainActivity.NAME_INTENT, result.getDevice().getName());
@@ -171,18 +146,12 @@ public class ScanService extends Service {
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onDestroy() {
-        Log.e("Destroy", "Here");
-        Intent intentDestroy = new Intent(MainActivity.INTENT_FILTER_RSSI);
-        intentDestroy.putExtra(MainActivity.PROGRESS_BAR_STATUS, false);
-        sendBroadcast(intentDestroy);
+        Log.e("Destroy", "Destroy Scan Service!");
+        startService(new Intent(ScanService.this, ListenGyroService.class));
         if (bluetoothLeScanner != null) {
             Log.e("Scanner", bluetoothLeScanner.toString());
             bluetoothLeScanner.stopScan(scanCallBack);
             bluetoothLeScanner = null;
-        }
-        if (gyroScopeReceiver != null) {
-            unregisterReceiver(gyroScopeReceiver);
-            gyroScopeReceiver = null;
         }
         super.onDestroy();
     }

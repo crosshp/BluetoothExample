@@ -18,79 +18,63 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
-
     static final String ADDRESS_INTENT = "ADDRESS";
     static final String NAME_INTENT = "NAME_INTENT";
     static final String RSSI_INTENT = "RSSI";
     static final String INTENT_FILTER_RSSI = "INTENT_FILTER_RSSI";
     static final String PROGRESS_BAR_STATUS = "PROGRESS_BAR_STATUS";
     static final String POWER_COUNT = "POWER_COUNT";
-    static final String RSSI_DISTANCE = "RSSI_DISTANCE";
     static int notificationID = 0;
     private static final int REQUEST_ENABLE_BT = 0;
     BluetoothAdapter bluetoothAdapter = null;
-    final String UUID = "00001800-0000-1000-8000-00805f9b34fb";
-    Button startScanButton = null;
-    Button stopScanButton = null;
     TextView addressText = null;
     TextView rssiText = null;
-    TextView logText = null;
     TextView powerText = null;
     TextView distanceText = null;
     ProgressBar progressBar = null;
     Button buttonBigGraph = null;
-    EditText editRSSI = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
-    long startOfScanTime = 0;
-
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
-        startService(intentStartGyro);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         initializeViewComponents();
         checkBluetooth();
         goToBluetoothRequestPermission();
+        registerBroadcastReceiver();
     }
 
     private void goToBluetoothRequestPermission() {
         int hasPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
         if (hasPermission == PackageManager.PERMISSION_GRANTED) {
-            initializeButtonClick(startScanButton, stopScanButton);
+            startScanService();
             return;
         }
         ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_BLUETOOTH_PERMISSION);
     }
 
-
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         if (requestCode == REQUEST_BLUETOOTH_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                initializeButtonClick(startScanButton, stopScanButton);
+                startScanService();
         } else {
             Toast.makeText(this, "Not acsess!",
                     Toast.LENGTH_LONG).show();
-            initializeButtonClick(startScanButton, stopScanButton);
         }
     }
 
     private void initializeViewComponents() {
-        startScanButton = (Button) findViewById(R.id.buttonStartScan);
-        stopScanButton = (Button) findViewById(R.id.buttonStopScan);
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         if (progressBar != null) {
             progressBar.setVisibility(View.GONE);
@@ -99,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
         powerText = (TextView) findViewById(R.id.textPower);
         addressText = (TextView) findViewById(R.id.textAddress);
         distanceText = (TextView) findViewById(R.id.textDistance);
-        editRSSI = (EditText) findViewById(R.id.editRSSI);
         buttonBigGraph = (Button) findViewById(R.id.buttonBigGraph);
         buttonBigGraph.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -108,72 +91,15 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-        logText = (TextView) findViewById(R.id.logText);
     }
-
-
-    private void initializeButtonClick(Button startScanButton, Button stopScanButton) {
-        if (startScanButton != null) {
-            startScanButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    startScanService();
-                    progressBar.setVisibility(View.VISIBLE);
-                }
-            });
-        }
-        if (stopScanButton != null) {
-            stopScanButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    stopScanService();
-                    progressBar.setVisibility(View.GONE);
-                }
-            });
-        }
-    }
-
 
     double getDistance(int rssi, int txPower) {
         return Math.pow(10d, ((double) txPower - rssi) / (10 * 2));
     }
 
     private void startScanService() {
-        Intent intent = new Intent(this, ScanService.class);
-        if (editRSSI.length() != 0) {
-            intent.putExtra(RSSI_DISTANCE, Integer.valueOf(editRSSI.getText().toString()));
-        }
-        editRSSI.setEnabled(false);
-        startService(intent);
-        Calendar calendar = Calendar.getInstance();
-        startOfScanTime = calendar.getTimeInMillis();
-        if (broadcastReceiverForGetRSSI == null) {
-            registerBroadcastReceiver();
-        }
-    }
-
-
-    private void stopScanService() {
-        final Intent intent = new Intent(this, ScanService.class);
-        stopService(intent);
-        editRSSI.setEnabled(true);
-        if (broadcastReceiverForGetRSSI != null) {
-            unregisterReceiver(broadcastReceiverForGetRSSI);
-            broadcastReceiverForGetRSSI = null;
-        }
-    }
-
-    protected static double calculateDistance(int txPower, double rssi) {
-        if (rssi == 0) {
-            return -1.0; // if we cannot determine distance, return -1.
-        }
-        double ratio = rssi * 1.0 / txPower;
-        if (ratio < 1.0) {
-            return Math.pow(ratio, 10);
-        } else {
-            double accuracy = (0.89976) * Math.pow(ratio, 7.7095) + 0.111;
-            return accuracy;
-        }
+        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
+        startService(intentStartGyro);
     }
 
     private void registerBroadcastReceiver() {
@@ -191,7 +117,6 @@ public class MainActivity extends AppCompatActivity {
                 distanceText.setText(String.valueOf(getDistance(rssi, power)));
                 if (!progressBarStatus) {
                     progressBar.setVisibility(View.GONE);
-                    stopScanService();
                 }
             }
         };
@@ -316,6 +241,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (broadcastReceiverForGetRSSI != null) {
+            unregisterReceiver(broadcastReceiverForGetRSSI);
+            broadcastReceiverForGetRSSI = null;
+        }
+        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
+        stopService(intentStartGyro);
         super.onDestroy();
     }
 

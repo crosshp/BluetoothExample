@@ -3,15 +3,12 @@ package com.example.kav.bluetoothexample;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.Vibrator;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.OrientationEventListener;
 
 import java.util.ArrayList;
@@ -28,9 +25,8 @@ public class ListenGyroService extends Service {
     private int delayTimeRotate = 870;
     private long firstTime = 0;
     long firstVibrateMilliseconds = 20;
-    private final int dispersionOrientation = 16;
+    private final int dispersionOrientation = 21;
 
-    public static String GYRO_WAKE_UP_ACTION = "GYRO_WAKE_UP_ACTION";
     private List<Integer> upPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> downPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> leftPosition = new ArrayList<>(dispersionOrientation);
@@ -51,6 +47,7 @@ public class ListenGyroService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.e("Destroy", "GYRO START!!!!   GYRO START!!!!   GYRO START!!!!");
         initDispersionArrays();
         powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock((PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
@@ -96,7 +93,7 @@ public class ListenGyroService extends Service {
                                 firstTime = System.currentTimeMillis();
                             } else {
                                 if (System.currentTimeMillis() - firstTime < delayTimeRotate) {
-                                    unlockAndStartHighScan();
+                                    unlockPhone();
                                     countOfWiggle = 0;
                                     if (isWakeLockAcquire) {
                                         wakeLock.release();
@@ -111,15 +108,14 @@ public class ListenGyroService extends Service {
             } else
                 isFirstWiggle = false;
         }
-
     }
 
     private void initDispersionArrays() {
         for (int i = 0; i < dispersionOrientation; i++) {
-            upPosition.add((355 + i) % 361);
-            downPosition.add(171 + i);
-            leftPosition.add(261 + i);
-            rightPosition.add(81 + i);
+            upPosition.add((350 + i) % 361);
+            downPosition.add(170 + i);
+            leftPosition.add(260 + i);
+            rightPosition.add(80 + i);
         }
     }
 
@@ -135,14 +131,12 @@ public class ListenGyroService extends Service {
         return -100;
     }
 
-    private void unlockAndStartHighScan() {
+    private void unlockPhone() {
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         PowerManager.WakeLock wakeLock = powerManager.newWakeLock((PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
         wakeLock.acquire();
-        Intent intent = new Intent(GYRO_WAKE_UP_ACTION);
-        IntentFilter filter = new IntentFilter(GYRO_WAKE_UP_ACTION);
-        filter.setPriority(1000);
-        sendBroadcast(intent);
+        startScanService();
+        stopService(new Intent(ListenGyroService.this,ListenGyroService.class));
         wakeLock.release();
     }
 
@@ -152,6 +146,12 @@ public class ListenGyroService extends Service {
             orientationEventListener.disable();
             orientationEventListener = null;
         }
+        Log.e("Destroy", "GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!");
         super.onDestroy();
+    }
+
+    private void startScanService() {
+        Intent intent = new Intent(this, ScanService.class);
+        startService(intent);
     }
 }
