@@ -118,7 +118,6 @@ public class ScanService extends Service {
                         if (rssiSwimWindow > distanceHigh) {
                             Log.e("ScanCallBack", "Device found!!!");
                             sendNotification(result);
-                            bluetoothLeScanner.stopScan(this);
                             onDestroy();
                         }
                         intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());

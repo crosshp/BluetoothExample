@@ -3,11 +3,15 @@ package com.example.kav.bluetoothexample;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.Vibrator;
 import android.support.annotation.Nullable;
-import android.util.Log;
 import android.view.OrientationEventListener;
 
 import java.util.ArrayList;
@@ -21,18 +25,22 @@ public class ListenGyroService extends Service {
     private long startTime = 0;
     private int startPoint = 0;
     private int deltaRotate = 90;
-    private int delayTimeRotate = 770;
-    private int secondDelayTimeRotate = delayTimeRotate * 2 + 100;
-    private boolean isSecondWiggle = false;
-    public static String GYRO_WAKE_UP_ACTION = "GYRO_WAKE_UP_ACTION";
+    private int delayTimeRotate = 870;
+    private long firstTime = 0;
+    long firstVibrateMilliseconds = 20;
+    private final int dispersionOrientation = 16;
 
-    private final int dispersionOrientation = 21;
+    public static String GYRO_WAKE_UP_ACTION = "GYRO_WAKE_UP_ACTION";
     private List<Integer> upPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> downPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> leftPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> rightPosition = new ArrayList<>(dispersionOrientation);
     private int[] positionValue = {0, 90, 180, 270};
-
+    PowerManager powerManager = null;
+    PowerManager.WakeLock wakeLock = null;
+    boolean isWakeLockAcquire = false;
+    private int countOfWiggle = 0;
+    private OrientationEventListener orientationEventListener = null;
 
     @Nullable
     @Override
@@ -44,61 +52,74 @@ public class ListenGyroService extends Service {
     public void onCreate() {
         super.onCreate();
         initDispersionArrays();
-
-        new OrientationEventListener(getBaseContext()) {
+        powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock((PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
+        orientationEventListener = new OrientationEventListener(getBaseContext(), SensorManager.SENSOR_DELAY_UI) {
             @Override
             public void onOrientationChanged(int orientation) {
+                if (!isWakeLockAcquire) {
+                    wakeLock.acquire();
+                    isWakeLockAcquire = true;
+                }
                 orientation = getStandartValueOfPosition(orientation);
-                Log.e("Orienatation", String.valueOf(orientation));
-                if (!isFirstWiggle) {
-                    if (orientation != -100) {
-                        startTime = System.currentTimeMillis();
-                        startPoint = orientation;
-                        isFirstWiggle = true;
-                    }
-                } else if (!isSecondWiggle) {
-                    if (orientation == startPoint) {
-                        startTime = System.currentTimeMillis();
-                        return;
-                    }
-                    long currentTime = System.currentTimeMillis();
-                    if (currentTime - startTime < delayTimeRotate) {
-                        if (Math.abs(orientation - startPoint) == deltaRotate || Math.abs(orientation - startPoint) == 270) {
-                            Log.e("Gyroscope", "FIRST FIRST FIRST!!!");
-                            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                            long milliseconds = 20;
-                            v.vibrate(milliseconds);
-                            isSecondWiggle = true;
-                        }
-                    } else
+                checkWiggle(orientation);
+            }
+        };
+        orientationEventListener.enable();
+    }
+
+    private void checkWiggle(int orientation) {
+        final Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (!isFirstWiggle) {
+            if (orientation != -100) {
+                startTime = System.currentTimeMillis();
+                startPoint = orientation;
+                isFirstWiggle = true;
+            }
+        } else {
+            if (orientation == startPoint) {
+                startTime = System.currentTimeMillis();
+                return;
+            }
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - startTime < delayTimeRotate) {
+                if (orientation != -100) {
+                    if (Math.abs(Math.abs(orientation) - Math.abs(startPoint)) == deltaRotate || Math.abs(Math.abs(orientation) - Math.abs(startPoint)) == 270) {
+                        vibrator.vibrate(firstVibrateMilliseconds);
                         isFirstWiggle = false;
-                } else {
-                    long currentTime = System.currentTimeMillis();
-                    if (currentTime - startTime < secondDelayTimeRotate) {
-                        if (Math.abs(orientation - startPoint) == 0) {
-                            Log.e("Gyroscope", "UNLOCK!!!");
-                            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                            long milliseconds = 20;
-                            v.vibrate(milliseconds);
-                            isSecondWiggle = false;
-                            isFirstWiggle = false;
-                            unlockAndStartHighScan();
+                        countOfWiggle++;
+                        if (countOfWiggle == 1)
+                            firstTime = System.currentTimeMillis();
+                        if (countOfWiggle == 2) {
+                            if (System.currentTimeMillis() - firstTime > delayTimeRotate) {
+                                countOfWiggle = 1;
+                                firstTime = System.currentTimeMillis();
+                            } else {
+                                if (System.currentTimeMillis() - firstTime < delayTimeRotate) {
+                                    unlockAndStartHighScan();
+                                    countOfWiggle = 0;
+                                    if (isWakeLockAcquire) {
+                                        wakeLock.release();
+                                        isWakeLockAcquire = false;
+                                    }
+                                } else
+                                    countOfWiggle = 0;
+                            }
                         }
-                    } else {
-                        isFirstWiggle = false;
-                        isSecondWiggle = false;
                     }
                 }
-            }
-        }.enable();
+            } else
+                isFirstWiggle = false;
+        }
+
     }
 
     private void initDispersionArrays() {
         for (int i = 0; i < dispersionOrientation; i++) {
-            upPosition.add((351 + i) % 361);
-            downPosition.add(170 + i);
-            leftPosition.add(260 + i);
-            rightPosition.add(80 + i);
+            upPosition.add((355 + i) % 361);
+            downPosition.add(171 + i);
+            leftPosition.add(261 + i);
+            rightPosition.add(81 + i);
         }
     }
 
@@ -114,13 +135,23 @@ public class ListenGyroService extends Service {
         return -100;
     }
 
-
     private void unlockAndStartHighScan() {
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         PowerManager.WakeLock wakeLock = powerManager.newWakeLock((PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
         wakeLock.acquire();
         Intent intent = new Intent(GYRO_WAKE_UP_ACTION);
+        IntentFilter filter = new IntentFilter(GYRO_WAKE_UP_ACTION);
+        filter.setPriority(1000);
         sendBroadcast(intent);
         wakeLock.release();
+    }
+
+    @Override
+    public void onDestroy() {
+        if (orientationEventListener != null) {
+            orientationEventListener.disable();
+            orientationEventListener = null;
+        }
+        super.onDestroy();
     }
 }

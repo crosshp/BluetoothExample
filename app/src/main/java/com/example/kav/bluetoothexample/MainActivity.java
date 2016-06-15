@@ -23,10 +23,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.jjoe64.graphview.GraphView;
-import com.jjoe64.graphview.series.DataPoint;
-import com.jjoe64.graphview.series.LineGraphSeries;
-
 import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
@@ -46,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     Button stopScanButton = null;
     TextView addressText = null;
     TextView rssiText = null;
+    TextView logText = null;
     TextView powerText = null;
     TextView distanceText = null;
     ProgressBar progressBar = null;
@@ -61,13 +58,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         Intent intentStartGyro = new Intent(this, ListenGyroService.class);
         startService(intentStartGyro);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         initializeViewComponents();
         checkBluetooth();
         goToBluetoothRequestPermission();
-
     }
 
     private void goToBluetoothRequestPermission() {
@@ -112,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        logText = (TextView) findViewById(R.id.logText);
     }
 
 
@@ -120,8 +117,6 @@ public class MainActivity extends AppCompatActivity {
             startScanButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    //    BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
-                    //    BluetoothScannerSingleton.getInstance().startScan(bluetoothManager);
                     startScanService();
                     progressBar.setVisibility(View.VISIBLE);
                 }
@@ -132,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     stopScanService();
-                    //     BluetoothScannerSingleton.getInstance().stopScan();
                     progressBar.setVisibility(View.GONE);
                 }
             });
@@ -141,13 +135,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     double getDistance(int rssi, int txPower) {
-    /*
-     * RSSI = TxPower - 10 * n * lg(d)
-     * n = 2 (in free space)
-     *
-     * d = 10 ^ ((TxPower - RSSI) / (10 * n))
-     */
-
         return Math.pow(10d, ((double) txPower - rssi) / (10 * 2));
     }
 
@@ -163,7 +150,6 @@ public class MainActivity extends AppCompatActivity {
         if (broadcastReceiverForGetRSSI == null) {
             registerBroadcastReceiver();
         }
-
     }
 
 
@@ -181,7 +167,6 @@ public class MainActivity extends AppCompatActivity {
         if (rssi == 0) {
             return -1.0; // if we cannot determine distance, return -1.
         }
-
         double ratio = rssi * 1.0 / txPower;
         if (ratio < 1.0) {
             return Math.pow(ratio, 10);
@@ -213,7 +198,6 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter();
         filter.addAction(INTENT_FILTER_RSSI);
         registerReceiver(broadcastReceiverForGetRSSI, filter);
-
     }
 
     private void checkBluetooth() {
@@ -332,10 +316,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
-        stopService(intentStartGyro);
         super.onDestroy();
-
     }
 
 }
