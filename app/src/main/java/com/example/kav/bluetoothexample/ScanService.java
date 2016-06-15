@@ -4,6 +4,10 @@ import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
@@ -23,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by kav on 16/06/02.
@@ -94,6 +99,7 @@ public class ScanService extends Service {
                             Log.e("ScanCallBack", "Device found!!!");
                             sendNotification(result);
                             stopService(new Intent(ScanService.this, ScanService.class));
+                        //    connect2Beacon(result);
                         }
                         intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
                         intent.putExtra(MainActivity.NAME_INTENT, result.getDevice().getName());
@@ -106,6 +112,46 @@ public class ScanService extends Service {
                                 + "\nDevice name = " + result.getDevice().getName());
                     }
                 }
+            }
+
+            private void connect2Beacon(ScanResult result) {
+                result.getDevice().connectGatt(getBaseContext(), false, new BluetoothGattCallback() {
+                    @Override
+                    public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+                        if (newState == BluetoothProfile.STATE_CONNECTED) {
+                            Log.e("GATT", "Connected to GATT server.");
+                            gatt.discoverServices();
+
+                        } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                            Log.e("GATT", "Disconnected from GATT server.");
+                            stopService(new Intent(ScanService.this, ScanService.class));
+                        }
+                    }
+
+                    @Override
+                    public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+                      BluetoothGattCharacteristic characteristic =  gatt.getService(UUID.fromString(SYSTEM_UUID)).getCharacteristic(UUID.fromString(SYSTEM_UUID));
+                        Log.e("Charachteristic", String.valueOf(characteristic.getValue()));
+                        Log.e("OnDiscovered",gatt.getDevice().getName());
+                        super.onServicesDiscovered(gatt, status);
+                    }
+
+                    @Override
+                    public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+                        int flag = characteristic.getProperties();
+                        int format = -1;
+                        if ((flag & 0x01) != 0) {
+                            format = BluetoothGattCharacteristic.FORMAT_UINT16;
+                            Log.d("READ", "Heart rate format UINT16.");
+                        } else {
+                            format = BluetoothGattCharacteristic.FORMAT_UINT8;
+                            Log.d("READ", "Heart rate format UINT8.");
+                        }
+                        final int heartRate = characteristic.getIntValue(format, 1);
+                        Log.d("READ", String.format("Received heart rate: %d", heartRate));
+                        super.onCharacteristicRead(gatt, characteristic, status);
+                    }
+                });
             }
         };
     }

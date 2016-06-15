@@ -25,7 +25,7 @@ public class ListenGyroService extends Service {
     private int delayTimeRotate = 870;
     private long firstTime = 0;
     long firstVibrateMilliseconds = 20;
-    private final int dispersionOrientation = 21;
+    private final int dispersionOrientation = 31;
 
     private List<Integer> upPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> downPosition = new ArrayList<>(dispersionOrientation);
@@ -51,7 +51,7 @@ public class ListenGyroService extends Service {
         initDispersionArrays();
         powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock((PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
-        orientationEventListener = new OrientationEventListener(getBaseContext(), SensorManager.SENSOR_DELAY_UI) {
+        orientationEventListener = new OrientationEventListener(getBaseContext(), SensorManager.SENSOR_DELAY_GAME) {
             @Override
             public void onOrientationChanged(int orientation) {
                 if (!isWakeLockAcquire) {
@@ -112,10 +112,10 @@ public class ListenGyroService extends Service {
 
     private void initDispersionArrays() {
         for (int i = 0; i < dispersionOrientation; i++) {
-            upPosition.add((350 + i) % 361);
-            downPosition.add(170 + i);
-            leftPosition.add(260 + i);
-            rightPosition.add(80 + i);
+            upPosition.add((345 + i) % 361);
+            downPosition.add(165 + i);
+            leftPosition.add(255 + i);
+            rightPosition.add(75 + i);
         }
     }
 
