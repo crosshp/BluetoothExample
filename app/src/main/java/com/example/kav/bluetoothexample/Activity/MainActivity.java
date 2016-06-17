@@ -21,6 +21,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.kav.bluetoothexample.UnlockDetector;
 import com.example.kav.bluetoothexample.Service.ListenGyroService;
 import com.example.kav.bluetoothexample.R;
 
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     Button buttonBigGraph = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
+    UnlockDetector unlockDetector = null;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -100,8 +102,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startScanService() {
-        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
-        startService(intentStartGyro);
+        IntentFilter intentFilter = new IntentFilter(Intent.ACTION_USER_PRESENT);
+        if (unlockDetector == null) {
+            unlockDetector = new UnlockDetector();
+        }
+        registerReceiver(unlockDetector, intentFilter);
+
+        /*Intent intentStartGyro = new Intent(this, ListenGyroService.class);
+        startService(intentStartGyro);*/
     }
 
     private void registerBroadcastReceiver() {
@@ -248,6 +256,11 @@ public class MainActivity extends AppCompatActivity {
         }
         Intent intentStartGyro = new Intent(this, ListenGyroService.class);
         stopService(intentStartGyro);
+
+        if(unlockDetector !=null){
+            unregisterReceiver(unlockDetector);
+            unlockDetector = null;
+        }
         super.onDestroy();
     }
 

@@ -63,12 +63,14 @@ public class ScanThread extends Thread {
                     Thread.sleep(delayScan);
                 } catch (InterruptedException e) {
                     onDestroy();
-                    scanThread.stop();
+                    if (scanThread.isAlive())
+                        scanThread.stop();
                 }
                 onDestroy();
-                scanThread.stop();
+                if (scanThread.isAlive())
+                    scanThread.stop();
             }
-        });
+        }).start();
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -153,7 +155,12 @@ public class ScanThread extends Thread {
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void onDestroy() {
         Log.e("Destroy", "Destroy Scan Service!");
-        context.startService(new Intent(context, ListenGyroService.class));
+        //
+        //
+        // context.startService(new Intent(context, ListenGyroService.class));
+        //
+        //
+
         if (bluetoothLeScanner != null) {
             Log.e("Scanner", bluetoothLeScanner.toString());
             bluetoothLeScanner.stopScan(scanCallBack);
