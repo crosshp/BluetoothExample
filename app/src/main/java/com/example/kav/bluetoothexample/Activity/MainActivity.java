@@ -1,4 +1,4 @@
-package com.example.kav.bluetoothexample;
+package com.example.kav.bluetoothexample.Activity;
 
 import android.Manifest;
 import android.annotation.TargetApi;
@@ -15,22 +15,24 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.kav.bluetoothexample.Service.ListenGyroService;
+import com.example.kav.bluetoothexample.R;
+
 
 public class MainActivity extends AppCompatActivity {
-    static final String ADDRESS_INTENT = "ADDRESS";
-    static final String NAME_INTENT = "NAME_INTENT";
-    static final String RSSI_INTENT = "RSSI";
-    static final String INTENT_FILTER_RSSI = "INTENT_FILTER_RSSI";
-    static final String PROGRESS_BAR_STATUS = "PROGRESS_BAR_STATUS";
-    static final String POWER_COUNT = "POWER_COUNT";
-    static int notificationID = 0;
+    public static final String ADDRESS_INTENT = "ADDRESS";
+    public static final String NAME_INTENT = "NAME_INTENT";
+    public static final String RSSI_INTENT = "RSSI";
+    public static final String INTENT_FILTER_RSSI = "INTENT_FILTER_RSSI";
+    public static final String PROGRESS_BAR_STATUS = "PROGRESS_BAR_STATUS";
+    public static final String POWER_COUNT = "POWER_COUNT";
+    public static int notificationID = 0;
     private static final int REQUEST_ENABLE_BT = 0;
     BluetoothAdapter bluetoothAdapter = null;
     TextView addressText = null;
@@ -106,7 +108,6 @@ public class MainActivity extends AppCompatActivity {
         broadcastReceiverForGetRSSI = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                Log.e("recieve", "here");
                 int rssi = intent.getIntExtra(RSSI_INTENT, 0);
                 String address = intent.getStringExtra(ADDRESS_INTENT);
                 boolean progressBarStatus = intent.getBooleanExtra(PROGRESS_BAR_STATUS, true);

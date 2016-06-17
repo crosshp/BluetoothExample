@@ -12,17 +12,6 @@
         android:layout_gravity="center_horizontal"
         android:src="@drawable/wave_bluetooth" />
 
-    <TextView
-        android:id="@+id/textView2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:fontFamily="sans-serif-light"
-        android:text="Идет сканирование движения\nПоверните телефон на 90* и обратно\nчтобы начать сканировать маячки"
-
-        android:textAlignment="center"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
-
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"

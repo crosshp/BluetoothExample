@@ -1,4 +1,4 @@
-package com.example.kav.bluetoothexample;
+package com.example.kav.bluetoothexample.Service;
 
 import android.app.Service;
 import android.content.Context;
@@ -136,7 +136,7 @@ public class ListenGyroService extends Service {
         PowerManager.WakeLock wakeLock = powerManager.newWakeLock((PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
         wakeLock.acquire();
         startScanService();
-        stopService(new Intent(ListenGyroService.this,ListenGyroService.class));
+        stopService(new Intent(ListenGyroService.this, ListenGyroService.class));
         wakeLock.release();
     }
 
@@ -151,7 +151,6 @@ public class ListenGyroService extends Service {
     }
 
     private void startScanService() {
-        Intent intent = new Intent(this, ScanService.class);
-        startService(intent);
+        new ScanThread(getBaseContext()).start();
     }
 }
