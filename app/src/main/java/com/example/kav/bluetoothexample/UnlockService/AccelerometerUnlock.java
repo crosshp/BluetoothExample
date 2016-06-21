@@ -1,4 +1,4 @@
-package com.example.kav.bluetoothexample.Service;
+package com.example.kav.bluetoothexample.UnlockService;
 
 import android.app.Service;
 import android.content.Context;
@@ -11,21 +11,23 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.OrientationEventListener;
 
+import com.example.kav.bluetoothexample.Service.ScanThread;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by kav on 16/06/09.
  */
-public class ListenGyroService extends Service {
+public class AccelerometerUnlock extends Service implements IUnlock {
     private boolean isFirstWiggle = false;
     private long startTime = 0;
     private int startPoint = 0;
     private int deltaRotate = 90;
-    private int delayTimeRotate = 870;
+    private int delayTimeRotate = 500;
     private long firstTime = 0;
     long firstVibrateMilliseconds = 20;
-    private final int dispersionOrientation = 21;
+    private final int dispersionOrientation = 15;
     private List<Integer> upPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> downPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> leftPosition = new ArrayList<>(dispersionOrientation);
@@ -44,6 +46,8 @@ public class ListenGyroService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+
 
     @Override
     public void onCreate() {
@@ -113,10 +117,10 @@ public class ListenGyroService extends Service {
 
     private void initDispersionArrays() {
         for (int i = 0; i < dispersionOrientation; i++) {
-            upPosition.add((350 + i) % 361);
-            downPosition.add(170 + i);
-            leftPosition.add(260 + i);
-            rightPosition.add(80 + i);
+            upPosition.add((352 + i) % 361);
+            downPosition.add(172 + i);
+            leftPosition.add(262 + i);
+            rightPosition.add(82 + i);
         }
     }
 
@@ -142,7 +146,6 @@ public class ListenGyroService extends Service {
                 isScanStart = true;
             }
         }
-        stopService(new Intent(ListenGyroService.this, ListenGyroService.class));
         wakeLock.release();
     }
 
@@ -161,6 +164,17 @@ public class ListenGyroService extends Service {
     }
 
     private void startScanService() {
-        new ScanThread(getBaseContext()).start();
+        new ScanThread(getBaseContext(), this).start();
+    }
+
+    @Override
+    public void startChecking(Context context) {
+        context.startService(new Intent(context, AccelerometerUnlock.class));
+    }
+
+    @Override
+    public void stopChecking(Context context) {
+        orientationEventListener.disable();
+        context.stopService(new Intent(context, AccelerometerUnlock.class));
     }
 }

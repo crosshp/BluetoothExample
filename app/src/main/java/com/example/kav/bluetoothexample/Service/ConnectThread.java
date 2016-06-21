@@ -70,7 +70,7 @@ public class ConnectThread extends Thread {
                         bluetoothGattCharacteristic.setValue(messageInByte);
                         boolean isWrite = gatt.writeCharacteristic(bluetoothGattCharacteristic);
                         if (!isWrite) {
-                            Log.e(TAG,"CANNOT WRITE!");
+                            Log.e(TAG, "CANNOT WRITE!");
                             onDestroy();
                         }
                     }

@@ -1,5 +1,6 @@
-package com.example.kav.bluetoothexample.Service;
+package com.example.kav.bluetoothexample.Interface;
 
+import android.annotation.TargetApi;
 import android.app.Notification;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -9,14 +10,17 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.ParcelUuid;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 
+import com.example.kav.bluetoothexample.Service.ConnectThread;
+import com.example.kav.bluetoothexample.UnlockService.AccelerometerUnlock;
 import com.example.kav.bluetoothexample.Activity.MainActivity;
 import com.example.kav.bluetoothexample.R;
-import com.example.kav.bluetoothexample.UnlockService.IUnlock;
+import com.example.kav.bluetoothexample.Service.ScanThread;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,9 +29,9 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Created by kav on 16/06/02.
+ * Created by kav on 16/06/07.
  */
-public class ScanThread extends Thread {
+public class BluetoothScannerThread extends Thread implements IBluetoothScanner {
     private BluetoothAdapter bluetoothAdapter = null;
     private BluetoothLeScanner bluetoothLeScanner = null;
     private ScanCallback scanCallBack = null;
@@ -41,17 +45,27 @@ public class ScanThread extends Thread {
     private boolean isFirst = true;
     private ScanThread currentThread = null;
     private String TAG = "SCAN THREAD";
-    IUnlock unlockClient = null;
 
-    public ScanThread(Context context, IUnlock unlockClient) {
-        this.unlockClient = unlockClient;
-        this.context = context;
+    private static volatile BluetoothScannerThread instance;
+
+
+    public static BluetoothScannerThread getInstance() {
+        BluetoothScannerThread localInstance = instance;
+        if (localInstance == null) {
+            synchronized (BluetoothScannerThread.class) {
+                localInstance = instance;
+                if (localInstance == null) {
+                    instance = localInstance = new BluetoothScannerThread();
+                }
+            }
+        }
+        return localInstance;
     }
 
     @Override
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void run() {
         Log.e(TAG, "START SCAN");
-        unlockClient.stopChecking(context);
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -72,6 +86,7 @@ public class ScanThread extends Thread {
 
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void initCallBack() {
         scanCallBack = new ScanCallback() {
             List<Integer> swimWindow = null;
@@ -118,6 +133,7 @@ public class ScanThread extends Thread {
         };
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void scanInHighMode(BluetoothLeScanner bluetoothLeScanner) {
         ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
         bluetoothLeScanner.startScan(new ArrayList<ScanFilter>(), scanSettings, scanCallBack);
@@ -134,6 +150,7 @@ public class ScanThread extends Thread {
         return false;
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void sendNotification(ScanResult result) {
         String message = "Имя:" + result.getDevice().getName() +
                 "\nАдресс:" + result.getDevice().getAddress() +
@@ -153,8 +170,13 @@ public class ScanThread extends Thread {
         MainActivity.notificationID++;
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void onDestroy() {
-        unlockClient.startChecking(context);
+        //
+        //
+        context.startService(new Intent(context, AccelerometerUnlock.class));
+        //
+        //
         if (bluetoothLeScanner != null) {
             bluetoothLeScanner.stopScan(scanCallBack);
             bluetoothLeScanner = null;
@@ -164,5 +186,16 @@ public class ScanThread extends Thread {
             currentThread = null;
         }
         Log.e(TAG, "DESTROYED!");
+    }
+
+    @Override
+    public void startScan(Context context) {
+        this.context = context;
+        this.start();
+    }
+
+    @Override
+    public void stopScan() {
+        this.interrupt();
     }
 }

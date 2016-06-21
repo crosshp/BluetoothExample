@@ -23,7 +23,7 @@
         </activity>
 
         <service
-            android:name=".Service.ListenGyroService"
+            android:name=".UnlockService.AccelerometerUnlock"
             android:enabled="true" />
 
         <activity android:name=".Activity.GraphActivity" />

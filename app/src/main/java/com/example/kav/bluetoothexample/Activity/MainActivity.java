@@ -17,13 +17,12 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.kav.bluetoothexample.UnlockDetector;
-import com.example.kav.bluetoothexample.Service.ListenGyroService;
+import com.example.kav.bluetoothexample.UnlockService.IUnlock;
+import com.example.kav.bluetoothexample.UnlockService.ScreenUnlock;
+import com.example.kav.bluetoothexample.UnlockService.AccelerometerUnlock;
 import com.example.kav.bluetoothexample.R;
 
 
@@ -43,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton buttonBigGraph = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
-    private UnlockDetector unlockDetector = null;
+    private ScreenUnlock screenUnlock = null;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -94,13 +93,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void startScanService() {
         /*IntentFilter intentFilter = new IntentFilter(Intent.ACTION_USER_PRESENT);
-        if (unlockDetector == null) {
-            unlockDetector = new UnlockDetector();
+        if (screenUnlock == null) {
+            screenUnlock = new ScreenUnlock();
         }
-        registerReceiver(unlockDetector, intentFilter);*/
+        registerReceiver(screenUnlock, intentFilter);*/
 
-        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
-        startService(intentStartGyro);
+       /* Intent intentStartGyro = new Intent(this, AccelerometerUnlock.class);
+        startService(intentStartGyro);*/
+
+        IUnlock iUnlock = new AccelerometerUnlock();
+        iUnlock.startChecking(getBaseContext());
     }
 
     private void registerBroadcastReceiver() {
@@ -139,12 +141,12 @@ public class MainActivity extends AppCompatActivity {
             unregisterReceiver(broadcastReceiverForGetRSSI);
             broadcastReceiverForGetRSSI = null;
         }
-        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
+        Intent intentStartGyro = new Intent(this, AccelerometerUnlock.class);
         stopService(intentStartGyro);
 
-        /*if (unlockDetector != null) {
-            unregisterReceiver(unlockDetector);
-            unlockDetector = null;
+        /*if (screenUnlock != null) {
+            unregisterReceiver(screenUnlock);
+            screenUnlock = null;
         }*/
         super.onDestroy();
     }
