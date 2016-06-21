@@ -48,7 +48,6 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     }
 
 
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -174,7 +173,8 @@ public class AccelerometerUnlock extends Service implements IUnlock {
 
     @Override
     public void stopChecking(Context context) {
-        orientationEventListener.disable();
         context.stopService(new Intent(context, AccelerometerUnlock.class));
+        if (orientationEventListener != null)
+            orientationEventListener.disable();
     }
 }

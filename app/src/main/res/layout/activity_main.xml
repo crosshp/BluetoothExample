@@ -133,6 +133,7 @@
         </LinearLayout>
     </android.support.v7.widget.CardView>
 
+
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/buttonBigGraph"
         android:layout_width="wrap_content"
@@ -145,5 +146,47 @@
         android:background="@color/transparencyColorAccent"
         android:elevation="20dp"
         android:src="@drawable/ic_chart_line" />
+
+    <android.support.v7.widget.CardView
+        android:id="@+id/view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/card1"
+        android:layout_margin="10dp"
+        app:cardBackgroundColor="@color/cardColor"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="15dp">
+
+        <RadioGroup
+            android:id="@+id/radioGroup"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:fontFamily="sans-serif-light"
+                android:text="Разблокировать"
+                android:textAppearance="?android:attr/textAppearanceLarge" />
+
+            <RadioButton
+                android:checked="true"
+                android:id="@+id/radioButtonAccelerometer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:text="Поворотом"
+                android:textStyle="normal" />
+
+            <RadioButton
+                android:id="@+id/radioButtonScreen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-light"
+                android:text="Разблокировкой экрана" />
+        </RadioGroup>
+    </android.support.v7.widget.CardView>
 
 </RelativeLayout>

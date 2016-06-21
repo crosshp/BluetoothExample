@@ -16,7 +16,10 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,7 +45,10 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton buttonBigGraph = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
-    private ScreenUnlock screenUnlock = null;
+    private RadioGroup radioGroup = null;
+    private IUnlock iUnlock = null;
+    private RadioButton radioButtonAccelerometer = null;
+    private RadioButton radioButtonScreen = null;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -88,20 +94,28 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        radioGroup = (RadioGroup) findViewById(R.id.radioGroup);
+        radioButtonAccelerometer = (RadioButton) findViewById(R.id.radioButtonAccelerometer);
+        radioButtonScreen = (RadioButton) findViewById(R.id.radioButtonScreen);
+        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                iUnlock.stopChecking(getBaseContext());
+                if (checkedId == R.id.radioButtonScreen) {
+                    iUnlock = new ScreenUnlock();
+                    Log.e("Lock", "SCREEN");
+                } else {
+                    iUnlock = new AccelerometerUnlock();
+                    Log.e("Lock", "Accelerometer");
+                }
+                iUnlock.startChecking(getBaseContext());
+            }
+        });
     }
 
 
     private void startScanService() {
-        /*IntentFilter intentFilter = new IntentFilter(Intent.ACTION_USER_PRESENT);
-        if (screenUnlock == null) {
-            screenUnlock = new ScreenUnlock();
-        }
-        registerReceiver(screenUnlock, intentFilter);*/
-
-       /* Intent intentStartGyro = new Intent(this, AccelerometerUnlock.class);
-        startService(intentStartGyro);*/
-
-        IUnlock iUnlock = new AccelerometerUnlock();
+        iUnlock = new AccelerometerUnlock();
         iUnlock.startChecking(getBaseContext());
     }
 
@@ -141,13 +155,7 @@ public class MainActivity extends AppCompatActivity {
             unregisterReceiver(broadcastReceiverForGetRSSI);
             broadcastReceiverForGetRSSI = null;
         }
-        Intent intentStartGyro = new Intent(this, AccelerometerUnlock.class);
-        stopService(intentStartGyro);
-
-        /*if (screenUnlock != null) {
-            unregisterReceiver(screenUnlock);
-            screenUnlock = null;
-        }*/
+        iUnlock.stopChecking(getBaseContext());
         super.onDestroy();
     }
 
