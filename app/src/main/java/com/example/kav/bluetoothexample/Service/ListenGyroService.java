@@ -25,18 +25,19 @@ public class ListenGyroService extends Service {
     private int delayTimeRotate = 870;
     private long firstTime = 0;
     long firstVibrateMilliseconds = 20;
-    private final int dispersionOrientation = 31;
-
+    private final int dispersionOrientation = 21;
     private List<Integer> upPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> downPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> leftPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> rightPosition = new ArrayList<>(dispersionOrientation);
     private int[] positionValue = {0, 90, 180, 270};
-    PowerManager powerManager = null;
-    PowerManager.WakeLock wakeLock = null;
-    boolean isWakeLockAcquire = false;
+    private PowerManager powerManager = null;
+    private PowerManager.WakeLock wakeLock = null;
+    private boolean isWakeLockAcquire = false;
     private int countOfWiggle = 0;
+    private boolean isScanStart = false;
     private OrientationEventListener orientationEventListener = null;
+    private String TAG = "GYRO SERVICE";
 
     @Nullable
     @Override
@@ -47,7 +48,7 @@ public class ListenGyroService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.e("Destroy", "GYRO START!!!!   GYRO START!!!!   GYRO START!!!!");
+        Log.e(TAG, "GYRO START!!!!   GYRO START!!!!   GYRO START!!!!");
         initDispersionArrays();
         powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock((PowerManager.PARTIAL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
@@ -112,10 +113,10 @@ public class ListenGyroService extends Service {
 
     private void initDispersionArrays() {
         for (int i = 0; i < dispersionOrientation; i++) {
-            upPosition.add((345 + i) % 361);
-            downPosition.add(165 + i);
-            leftPosition.add(255 + i);
-            rightPosition.add(75 + i);
+            upPosition.add((350 + i) % 361);
+            downPosition.add(170 + i);
+            leftPosition.add(260 + i);
+            rightPosition.add(80 + i);
         }
     }
 
@@ -135,7 +136,13 @@ public class ListenGyroService extends Service {
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         PowerManager.WakeLock wakeLock = powerManager.newWakeLock((PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP), "TAG");
         wakeLock.acquire();
-        startScanService();
+        synchronized (this) {
+            if (!isScanStart) {
+                Log.e("SCAN SCAN","START START START START");
+                startScanService();
+                isScanStart = true;
+            }
+        }
         stopService(new Intent(ListenGyroService.this, ListenGyroService.class));
         wakeLock.release();
     }
@@ -146,7 +153,11 @@ public class ListenGyroService extends Service {
             orientationEventListener.disable();
             orientationEventListener = null;
         }
-        Log.e("Destroy", "GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!");
+        Log.e(TAG, "GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!   GYRO DESTROY!!!!");
+        upPosition = null;
+        downPosition = null;
+        leftPosition = null;
+        rightPosition = null;
         super.onDestroy();
     }
 

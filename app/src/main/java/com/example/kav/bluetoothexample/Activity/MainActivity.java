@@ -108,8 +108,8 @@ public class MainActivity extends AppCompatActivity {
         }
         registerReceiver(unlockDetector, intentFilter);
 
-        /*Intent intentStartGyro = new Intent(this, ListenGyroService.class);
-        startService(intentStartGyro);*/
+        Intent intentStartGyro = new Intent(this, ListenGyroService.class);
+        startService(intentStartGyro);
     }
 
     private void registerBroadcastReceiver() {

@@ -29,18 +29,19 @@ import java.util.UUID;
  * Created by kav on 16/06/02.
  */
 public class ScanThread extends Thread {
-    BluetoothAdapter bluetoothAdapter = null;
-    BluetoothLeScanner bluetoothLeScanner = null;
-    ScanCallback scanCallBack = null;
-    int distanceHigh = -65;
+    private BluetoothAdapter bluetoothAdapter = null;
+    private BluetoothLeScanner bluetoothLeScanner = null;
+    private ScanCallback scanCallBack = null;
+    private int distanceHigh = -65;
     private final UUID SYSTEM_UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
-    String[] systemUUIDs = new String[]{SYSTEM_UUID.toString()};
-
-    Map<String, List<Integer>> resultsRssiMap = new HashMap<>();
-    int rssiSwimWindow = 0;
-    int delayScan = 5000;
-    ScanThread scanThread = this;
-    Context context = null;
+    private String[] systemUUIDs = new String[]{SYSTEM_UUID.toString()};
+    private Map<String, List<Integer>> resultsRssiMap = new HashMap<>();
+    private int rssiSwimWindow = 0;
+    private int delayScan = 5000;
+    private Context context = null;
+    private boolean isFirst = true;
+    private ScanThread currentThread = null;
+    private String TAG = "SCAN THREAD";
 
 
     public ScanThread(Context context) {
@@ -62,13 +63,11 @@ public class ScanThread extends Thread {
                 try {
                     Thread.sleep(delayScan);
                 } catch (InterruptedException e) {
-                    onDestroy();
-                    if (scanThread.isAlive())
-                        scanThread.stop();
+                    if (currentThread != null && !currentThread.isInterrupted())
+                        onDestroy();
                 }
-                onDestroy();
-                if (scanThread.isAlive())
-                    scanThread.stop();
+                if (currentThread != null && !currentThread.isInterrupted())
+                    onDestroy();
             }
         }).start();
     }
@@ -100,10 +99,15 @@ public class ScanThread extends Thread {
                     rssiSwimWindow /= swimWindow.size();
 
                     if (rssiSwimWindow > distanceHigh) {
-                        Log.e("ScanCallBack", "Device found!!!");
+                        Log.e(TAG, "Device found!!!");
                         sendNotification(result);
+                        synchronized (this) {
+                            if (isFirst) {
+                                new ConnectThread(context, result.getDevice()).start();
+                                isFirst = false;
+                            }
+                        }
                         onDestroy();
-                        new ConnectThread(context, result.getDevice()).start();
                     }
                     intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
                     intent.putExtra(MainActivity.NAME_INTENT, result.getDevice().getName());
@@ -154,17 +158,20 @@ public class ScanThread extends Thread {
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void onDestroy() {
-        Log.e("Destroy", "Destroy Scan Service!");
         //
         //
-        // context.startService(new Intent(context, ListenGyroService.class));
+        context.startService(new Intent(context, ListenGyroService.class));
         //
         //
-
         if (bluetoothLeScanner != null) {
-            Log.e("Scanner", bluetoothLeScanner.toString());
             bluetoothLeScanner.stopScan(scanCallBack);
             bluetoothLeScanner = null;
         }
+
+        if (currentThread != null && !currentThread.isInterrupted()) {
+            currentThread.interrupt();
+            currentThread = null;
+        }
+        Log.e(TAG, "DESTROYED!");
     }
 }

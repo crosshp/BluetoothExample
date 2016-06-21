@@ -17,13 +17,14 @@ import java.util.UUID;
 public class ConnectThread extends Thread {
     private final UUID SYSTEM_UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
     private final UUID MODULE_UUID = UUID.fromString("0000FFE1-0000-1000-8000-00805F9B34FB");
-    public BluetoothDevice device = null;
-    BluetoothGatt bluetoothGatt = null;
-    String TAG = "CONNECT SERVICE";
-    String message = "123453";
-    byte[] messageInByte = message.getBytes();
-    int delayConnect = 5000;
-    Context context = null;
+    private BluetoothDevice device = null;
+    private BluetoothGatt bluetoothGatt = null;
+    private String TAG = "CONNECT SERVICE";
+    private String message = "123451";
+    private byte[] messageInByte = message.getBytes();
+    private int delayConnect = 5000;
+    private Context context = null;
+    private ConnectThread currentThread = this;
 
     public ConnectThread(Context context, BluetoothDevice device) {
         this.context = context;
@@ -38,11 +39,14 @@ public class ConnectThread extends Thread {
                 try {
                     Thread.sleep(delayConnect);
                 } catch (InterruptedException e) {
-                    onDestroy();
+                    if (currentThread != null && !currentThread.isInterrupted())
+                        onDestroy();
                 }
-                onDestroy();
+                if (currentThread != null && !currentThread.isInterrupted())
+                    onDestroy();
             }
         }).start();
+
         Log.e(TAG, device.getName());
         bluetoothGatt = device.connectGatt(context, false, new BluetoothGattCallback() {
             @Override
@@ -60,7 +64,7 @@ public class ConnectThread extends Thread {
 
             @Override
             public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-                if (status == 0) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
                     BluetoothGattCharacteristic bluetoothGattCharacteristic = bluetoothGatt.getService(SYSTEM_UUID).getCharacteristic(MODULE_UUID);
                     if ((bluetoothGattCharacteristic.getProperties() & (BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE | BluetoothGattCharacteristic.PROPERTY_NOTIFY)) > 0) {
                         bluetoothGatt.setCharacteristicNotification(bluetoothGattCharacteristic, true);
@@ -69,6 +73,7 @@ public class ConnectThread extends Thread {
                         boolean isWrite = gatt.writeCharacteristic(bluetoothGattCharacteristic);
                         if (!isWrite) {
                             Toast.makeText(context, "Can not write message to Device", Toast.LENGTH_LONG).show();
+                            onDestroy();
                         }
                     }
                 }
@@ -90,11 +95,17 @@ public class ConnectThread extends Thread {
     }
 
     public void onDestroy() {
-        Log.e(TAG, "CONNECT SERVICE  DESTROY!!!");
         if (bluetoothGatt != null) {
-            bluetoothGatt.disconnect();
             bluetoothGatt.close();
             bluetoothGatt = null;
         }
+        Log.e(TAG, "DESTROYED!!!");
+
+        if (currentThread != null && !currentThread.isInterrupted()) {
+            currentThread.interrupt();
+            currentThread = null;
+        }
+        device = null;
+        context = null;
     }
 }
