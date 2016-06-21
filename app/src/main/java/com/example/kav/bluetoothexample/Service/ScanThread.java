@@ -51,25 +51,25 @@ public class ScanThread extends Thread {
     @Override
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void run() {
-        initCallBack();
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
-        if (bluetoothLeScanner != null)
-            bluetoothLeScanner.stopScan(scanCallBack);
-        scanInHighMode(bluetoothLeScanner);
+        Log.e(TAG, "START SCAN");
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     Thread.sleep(delayScan);
                 } catch (InterruptedException e) {
-                    if (currentThread != null && !currentThread.isInterrupted())
-                        onDestroy();
-                }
-                if (currentThread != null && !currentThread.isInterrupted())
                     onDestroy();
+                }
+                onDestroy();
             }
         }).start();
+        initCallBack();
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+        if (bluetoothLeScanner != null)
+            bluetoothLeScanner.stopScan(scanCallBack);
+        scanInHighMode(bluetoothLeScanner);
+
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -167,7 +167,6 @@ public class ScanThread extends Thread {
             bluetoothLeScanner.stopScan(scanCallBack);
             bluetoothLeScanner = null;
         }
-
         if (currentThread != null && !currentThread.isInterrupted()) {
             currentThread.interrupt();
             currentThread = null;

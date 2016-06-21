@@ -30,14 +30,12 @@ public class GraphActivity extends AppCompatActivity {
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
 
 
-    public long startOfScanTime = 0;
-    GraphView graph = null;
-    DataPoint[] generateData = new DataPoint[]{
-    };
-    private LineGraphSeries<DataPoint> mSeries2;
-    Map<String, LineGraphSeries<DataPoint>> mapSeries = new HashMap<>();
-    Map<String, Integer> colorMap = new HashMap<>();
-    List<Integer> colors = new ArrayList<>();
+    private long startOfScanTime = 0;
+    private GraphView graph = null;
+    private DataPoint[] generateData = {};
+    private Map<String, LineGraphSeries<DataPoint>> mapSeries = new HashMap<>();
+    private Map<String, Integer> colorMap = new HashMap<>();
+    private List<Integer> colors = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -59,7 +57,7 @@ public class GraphActivity extends AppCompatActivity {
         graph.getViewport().setScrollable(true);
         graph.getViewport().setScalable(true);
         graph.getLegendRenderer().setVisible(true);
-        graph.getLegendRenderer().setFixedPosition(30,30);
+        graph.getLegendRenderer().setFixedPosition(30, 30);
         startOfScanTime = Calendar.getInstance().getTimeInMillis();
         registerBroadcastReceiver();
     }

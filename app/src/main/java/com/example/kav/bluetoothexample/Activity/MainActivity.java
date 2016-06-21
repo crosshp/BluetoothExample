@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -35,16 +36,15 @@ public class MainActivity extends AppCompatActivity {
     public static final String POWER_COUNT = "POWER_COUNT";
     public static int notificationID = 0;
     private static final int REQUEST_ENABLE_BT = 0;
-    BluetoothAdapter bluetoothAdapter = null;
-    TextView addressText = null;
-    TextView rssiText = null;
-    TextView powerText = null;
-    TextView distanceText = null;
-    ProgressBar progressBar = null;
-    Button buttonBigGraph = null;
+    private BluetoothAdapter bluetoothAdapter = null;
+    private TextView addressText = null;
+    private TextView rssiText = null;
+    private TextView powerText = null;
+    private TextView distanceText = null;
+    private FloatingActionButton buttonBigGraph = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
-    UnlockDetector unlockDetector = null;
+    private UnlockDetector unlockDetector = null;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -79,15 +79,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeViewComponents() {
-        progressBar = (ProgressBar) findViewById(R.id.progressBar);
-        if (progressBar != null) {
-            progressBar.setVisibility(View.GONE);
-        }
         rssiText = (TextView) findViewById(R.id.textRssi);
         powerText = (TextView) findViewById(R.id.textPower);
         addressText = (TextView) findViewById(R.id.textAddress);
         distanceText = (TextView) findViewById(R.id.textDistance);
-        buttonBigGraph = (Button) findViewById(R.id.buttonBigGraph);
+        buttonBigGraph = (FloatingActionButton) findViewById(R.id.buttonBigGraph);
         buttonBigGraph.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -97,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    double getDistance(int rssi, int txPower) {
+    private double getDistance(int rssi, int txPower) {
         return Math.pow(10d, ((double) txPower - rssi) / (10 * 2));
     }
 
@@ -124,9 +120,6 @@ public class MainActivity extends AppCompatActivity {
                 addressText.setText(address);
                 powerText.setText(String.valueOf(power));
                 distanceText.setText(String.valueOf(getDistance(rssi, power)));
-                if (!progressBarStatus) {
-                    progressBar.setVisibility(View.GONE);
-                }
             }
         };
         IntentFilter filter = new IntentFilter();
@@ -147,107 +140,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-      /*  if (bluetoothAdapter != null) {
-            Log.e("Address", bluetoothAdapter.getAddress());
-            Log.e("Name", bluetoothAdapter.getName());
-            bluetoothAdapter.startLeScan(new BluetoothAdapter.LeScanCallback() {
-                @Override
-                public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-                    Log.e("Device name", device.getName());
-                    Log.e("Device adress", device.getAddress());
-                    if (device.getAddress().equals("20:C3:8F:FF:54:BC")) {
-                        iBeaconDevice = device;
-                        bluetoothAdapter.stopLeScan(this);
-                        bluetoothAdapter.cancelDiscovery();
-                        bluetoothGatt = iBeaconDevice.connectGatt(getBaseContext(), false, new BluetoothGattCallback() {
-                            @Override
-                            public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-                                Log.e("GATT", "On Connection");
-                                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                                    Log.e("GATT", "Connected to GATT server.");
-                                    gatt.discoverServices();
-
-                                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                                    Log.e("GATT", "Disconnected from GATT server.");
-                                }
-                            }
-
-                            @Override
-                            public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-                                Log.e("GATT", "On Service Discovered");
-                                if (status == BluetoothGatt.GATT_SUCCESS) {
-                                    Log.e("GATT", "Succes Service Discovered");
-                                    for (int i = 0; i < gatt.getServices().size(); i++) {
-                                        Log.e("UUID Type" + i, String.valueOf(gatt.getServices().get(i).getType()));
-                                        Log.e("UUID" + i + " = ", gatt.getServices().get(i).getUuid().toString());
-                                    }
-                                    gatt.close();
-
-                                }
-                                //gatt.readCharacteristic();
-                            }
-
-                            @Override
-                            public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-                                Log.e("GATT", "On Charachre Read7");
-                                Log.e("Charach", characteristic.getStringValue(0));
-                            }
-
-                            @Override
-                            public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-                                Log.e("GATT", "On Charachre Read6");
-                            }
-
-                            @Override
-                            public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-                                Log.e("GATT", "On Charachre Read5");
-                            }
-
-                            @Override
-                            public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-                                Log.e("GATT", "On Charachre Read11111");
-                            }
-
-                            @Override
-                            public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-                                Log.e("GATT", "On Charachre Read1111");
-                            }
-
-                            @Override
-                            public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {
-                                Log.e("GATT", "On Charachre Read111");
-                            }
-
-                            @Override
-                            public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
-                                if (status == BluetoothGatt.GATT_SUCCESS) {
-                                    Log.e("GATT", "Succes Read Rssi");
-                                    Log.e("GATT", "Rssi = " + rssi);
-                                    //
-                                }
-                            }
-
-                            @Override
-                            public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
-                                Log.e("GATT", "On Charachre Read1");
-                            }
-                        });
-                        Log.e("Ibeacon Device name", iBeaconDevice.getName());
-                        Log.e("Ibeacon Device adress", iBeaconDevice.getAddress());
-                        arrayAdapter.add(device.getName());
-                        arrayAdapter.notifyDataSetChanged();
-                        bluetoothAdapter.stopLeScan(this);
-
-                    }
-                }
-
-
-            });
-        }
-*/
-
-
     @Override
     protected void onDestroy() {
         if (broadcastReceiverForGetRSSI != null) {
@@ -257,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intentStartGyro = new Intent(this, ListenGyroService.class);
         stopService(intentStartGyro);
 
-        if(unlockDetector !=null){
+        if (unlockDetector != null) {
             unregisterReceiver(unlockDetector);
             unlockDetector = null;
         }

@@ -39,11 +39,9 @@ public class ConnectThread extends Thread {
                 try {
                     Thread.sleep(delayConnect);
                 } catch (InterruptedException e) {
-                    if (currentThread != null && !currentThread.isInterrupted())
-                        onDestroy();
-                }
-                if (currentThread != null && !currentThread.isInterrupted())
                     onDestroy();
+                }
+                onDestroy();
             }
         }).start();
 
@@ -72,7 +70,7 @@ public class ConnectThread extends Thread {
                         bluetoothGattCharacteristic.setValue(messageInByte);
                         boolean isWrite = gatt.writeCharacteristic(bluetoothGattCharacteristic);
                         if (!isWrite) {
-                            Toast.makeText(context, "Can not write message to Device", Toast.LENGTH_LONG).show();
+                            Log.e(TAG,"CANNOT WRITE!");
                             onDestroy();
                         }
                     }

@@ -138,7 +138,6 @@ public class ListenGyroService extends Service {
         wakeLock.acquire();
         synchronized (this) {
             if (!isScanStart) {
-                Log.e("SCAN SCAN","START START START START");
                 startScanService();
                 isScanStart = true;
             }
