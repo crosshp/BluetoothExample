@@ -40,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView addressText = null;
     private TextView rssiText = null;
     private TextView powerText = null;
-    private TextView distanceText = null;
     private FloatingActionButton buttonBigGraph = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
@@ -82,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
         rssiText = (TextView) findViewById(R.id.textRssi);
         powerText = (TextView) findViewById(R.id.textPower);
         addressText = (TextView) findViewById(R.id.textAddress);
-        distanceText = (TextView) findViewById(R.id.textDistance);
         buttonBigGraph = (FloatingActionButton) findViewById(R.id.buttonBigGraph);
         buttonBigGraph.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -114,12 +112,10 @@ public class MainActivity extends AppCompatActivity {
             public void onReceive(Context context, Intent intent) {
                 int rssi = intent.getIntExtra(RSSI_INTENT, 0);
                 String address = intent.getStringExtra(ADDRESS_INTENT);
-                boolean progressBarStatus = intent.getBooleanExtra(PROGRESS_BAR_STATUS, true);
                 int power = intent.getIntExtra(POWER_COUNT, 0);
                 rssiText.setText(String.valueOf(rssi));
                 addressText.setText(address);
                 powerText.setText(String.valueOf(power));
-                distanceText.setText(String.valueOf(getDistance(rssi, power)));
             }
         };
         IntentFilter filter = new IntentFilter();
