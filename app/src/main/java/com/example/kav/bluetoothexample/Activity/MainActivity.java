@@ -91,16 +91,13 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private double getDistance(int rssi, int txPower) {
-        return Math.pow(10d, ((double) txPower - rssi) / (10 * 2));
-    }
 
     private void startScanService() {
-        IntentFilter intentFilter = new IntentFilter(Intent.ACTION_USER_PRESENT);
+        /*IntentFilter intentFilter = new IntentFilter(Intent.ACTION_USER_PRESENT);
         if (unlockDetector == null) {
             unlockDetector = new UnlockDetector();
         }
-        registerReceiver(unlockDetector, intentFilter);
+        registerReceiver(unlockDetector, intentFilter);*/
 
         Intent intentStartGyro = new Intent(this, ListenGyroService.class);
         startService(intentStartGyro);
@@ -145,10 +142,10 @@ public class MainActivity extends AppCompatActivity {
         Intent intentStartGyro = new Intent(this, ListenGyroService.class);
         stopService(intentStartGyro);
 
-        if (unlockDetector != null) {
+        /*if (unlockDetector != null) {
             unregisterReceiver(unlockDetector);
             unlockDetector = null;
-        }
+        }*/
         super.onDestroy();
     }
 
