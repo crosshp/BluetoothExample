@@ -12,12 +12,14 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -47,8 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
     private RadioGroup radioGroup = null;
     private IUnlock iUnlock = null;
-    private RadioButton radioButtonAccelerometer = null;
-    private RadioButton radioButtonScreen = null;
+    private ProgressBar progressBar = null;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -94,21 +95,32 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+        }
         radioGroup = (RadioGroup) findViewById(R.id.radioGroup);
-        radioButtonAccelerometer = (RadioButton) findViewById(R.id.radioButtonAccelerometer);
-        radioButtonScreen = (RadioButton) findViewById(R.id.radioButtonScreen);
         radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                iUnlock.stopChecking(getBaseContext());
-                if (checkedId == R.id.radioButtonScreen) {
-                    iUnlock = new ScreenUnlock();
-                    Log.e("Lock", "SCREEN");
-                } else {
-                    iUnlock = new AccelerometerUnlock();
-                    Log.e("Lock", "Accelerometer");
-                }
-                iUnlock.startChecking(getBaseContext());
+            public void onCheckedChanged(RadioGroup group, final int checkedId) {
+                progressBar.setVisibility(View.VISIBLE);
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        stopService(new Intent(getBaseContext(), ScreenUnlock.class));
+                        stopService(new Intent(getBaseContext(), AccelerometerUnlock.class));
+                        if (checkedId == R.id.radioButtonScreen) {
+                            iUnlock = new ScreenUnlock();
+                            Log.e("Lock", "SCREEN");
+                        } else {
+                            iUnlock = new AccelerometerUnlock();
+                            Log.e("Lock", "Accelerometer");
+                        }
+                        iUnlock.startChecking(getBaseContext());
+                        progressBar.setVisibility(View.GONE);
+                    }
+
+                }, 7000);
             }
         });
     }

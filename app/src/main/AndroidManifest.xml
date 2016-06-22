@@ -22,9 +22,8 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".UnlockService.AccelerometerUnlock"
-            android:enabled="true" />
+        <service android:name=".UnlockService.AccelerometerUnlock" />
+        <service android:name=".UnlockService.ScreenUnlock" />
 
         <activity android:name=".Activity.GraphActivity" />
     </application>

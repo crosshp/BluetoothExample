@@ -16,9 +16,11 @@
 
     <android.support.v7.widget.CardView
         android:id="@+id/card1"
+        android:translationZ="7dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
+        android:clickable="true"
         app:cardBackgroundColor="@color/cardColor"
         app:cardCornerRadius="0dp"
         app:cardElevation="15dp">
@@ -42,8 +44,8 @@
 
                 <ImageView
                     android:id="@+id/imageView4"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="25dp"
+                    android:layout_height="25dp"
                     android:padding="1dp"
                     android:src="@drawable/ic_led_variant_on" />
 
@@ -54,7 +56,7 @@
                     android:fontFamily="sans-serif-light"
                     android:paddingLeft="10dp"
                     android:text="Address = "
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <TextView
                     android:id="@+id/textAddress"
@@ -63,7 +65,7 @@
                     android:layout_gravity="center_vertical"
                     android:fontFamily="sans-serif-light"
                     android:text="0"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
 
             </LinearLayout>
 
@@ -74,8 +76,8 @@
 
                 <ImageView
                     android:id="@+id/imageView5"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="25dp"
+                    android:layout_height="25dp"
                     android:padding="1dp"
                     android:src="@drawable/ic_bluetooth_audio" />
 
@@ -86,7 +88,7 @@
                     android:fontFamily="sans-serif-light"
                     android:paddingLeft="10dp"
                     android:text="Rssi = "
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <TextView
                     android:id="@+id/textRssi"
@@ -96,7 +98,7 @@
                     android:fontFamily="sans-serif-light"
                     android:text="0"
 
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
             </LinearLayout>
 
             <LinearLayout
@@ -106,9 +108,8 @@
 
                 <ImageView
                     android:id="@+id/imageView3"
-
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_width="25dp"
+                    android:layout_height="25dp"
                     android:padding="1dp"
                     android:src="@drawable/ic_battery_70" />
 
@@ -119,7 +120,7 @@
                     android:fontFamily="sans-serif-light"
                     android:paddingLeft="10dp"
                     android:text="Power = "
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <TextView
                     android:id="@+id/textPower"
@@ -128,7 +129,7 @@
                     android:layout_gravity="center_vertical"
                     android:fontFamily="sans-serif-light"
                     android:text="0"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
             </LinearLayout>
         </LinearLayout>
     </android.support.v7.widget.CardView>
@@ -144,6 +145,7 @@
         android:layout_marginLeft="@dimen/fab_margin"
         android:layout_marginRight="@dimen/fab_margin"
         android:background="@color/transparencyColorAccent"
+        android:clickable="true"
         android:elevation="20dp"
         android:src="@drawable/ic_chart_line" />
 
@@ -153,6 +155,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/card1"
         android:layout_margin="10dp"
+        android:clickable="true"
         app:cardBackgroundColor="@color/cardColor"
         app:cardCornerRadius="0dp"
         app:cardElevation="15dp">
@@ -168,14 +171,21 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:fontFamily="sans-serif-light"
-                android:text="Разблокировать"
+                android:text="Режим разблокировки"
                 android:textAppearance="?android:attr/textAppearanceLarge" />
 
+
+            <ProgressBar
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/progressBar"
+                android:layout_gravity="center_horizontal" />
+
             <RadioButton
-                android:checked="true"
                 android:id="@+id/radioButtonAccelerometer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:checked="true"
                 android:fontFamily="sans-serif-light"
                 android:text="Поворотом"
                 android:textStyle="normal" />
