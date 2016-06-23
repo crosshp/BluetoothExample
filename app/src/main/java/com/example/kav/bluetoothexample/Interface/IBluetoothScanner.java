@@ -11,4 +11,6 @@ import com.example.kav.bluetoothexample.UnlockService.IUnlock;
  */
 public interface IBluetoothScanner {
     void startScan(Context context, IUnlock unlockClient);
+
+    void stopScan();
 }

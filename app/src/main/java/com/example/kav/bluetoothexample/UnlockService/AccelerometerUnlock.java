@@ -11,7 +11,9 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.OrientationEventListener;
 
-import com.example.kav.bluetoothexample.Service.ScanThread;
+import com.example.kav.bluetoothexample.Interface.BluetoothConnector;
+import com.example.kav.bluetoothexample.Interface.BluetoothScanner;
+import com.example.kav.bluetoothexample.Interface.Observer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +49,6 @@ public class AccelerometerUnlock extends Service implements IUnlock {
         return null;
     }
 
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -62,7 +63,7 @@ public class AccelerometerUnlock extends Service implements IUnlock {
                     wakeLock.acquire();
                     isWakeLockAcquire = true;
                 }
-                orientation = getStandartValueOfPosition(orientation);
+                orientation = getValueOfArea(orientation);
                 checkWiggle(orientation);
             }
         };
@@ -123,7 +124,7 @@ public class AccelerometerUnlock extends Service implements IUnlock {
         }
     }
 
-    private int getStandartValueOfPosition(int orientation) {
+    private int getValueOfArea(int orientation) {
         if (upPosition.contains(orientation))
             return positionValue[0];
         if (rightPosition.contains(orientation))
@@ -163,7 +164,31 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     }
 
     private void startScanService() {
-        new ScanThread(getBaseContext(), this).start();
+        BluetoothScanner.getInstance().startScan(getBaseContext(), this);
+        BluetoothScanner.getInstance().setOnScanResultListener(new Observer() {
+            @Override
+            public void onSuccess() {
+                Log.e(TAG+" OBSERVER", "ON SUCCESS");
+                BluetoothConnector.getInstance().connect(BluetoothScanner.getInstance().getFoundDevice(), getBaseContext());
+                BluetoothConnector.getInstance().setOnScanResultListener(new Observer() {
+                    @Override
+                    public void onSuccess() {
+                        Log.e(TAG+" OBSERVER", "ON SUCCESS CONNECT");
+                    }
+
+                    @Override
+                    public void onFail() {
+                        Log.e(TAG+" OBSERVER", "ON FAIL CONNECT");
+                    }
+                });
+            }
+
+            @Override
+            public void onFail() {
+                Log.e(TAG+" OBSERVER", "ON FAIL");
+            }
+        });
+        // new ScanThread(getBaseContext(), this).start();
     }
 
     @Override
@@ -173,8 +198,10 @@ public class AccelerometerUnlock extends Service implements IUnlock {
 
     @Override
     public void stopChecking(Context context) {
-        context.stopService(new Intent(context, AccelerometerUnlock.class));
-        if (orientationEventListener != null)
+        if (orientationEventListener != null) {
             orientationEventListener.disable();
+            orientationEventListener = null;
+        }
+        context.stopService(new Intent(context, AccelerometerUnlock.class));
     }
 }

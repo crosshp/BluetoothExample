@@ -1,6 +1,5 @@
-package com.example.kav.bluetoothexample.Service;
+package com.example.kav.bluetoothexample.Interface;
 
-import android.app.Notification;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -11,13 +10,9 @@ import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
 import android.os.ParcelUuid;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
-import android.support.v7.widget.CardView;
 import android.util.Log;
 
 import com.example.kav.bluetoothexample.Activity.MainActivity;
-import com.example.kav.bluetoothexample.R;
 import com.example.kav.bluetoothexample.UnlockService.IUnlock;
 
 import java.util.ArrayList;
@@ -27,9 +22,11 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Created by kav on 16/06/02.
+ * Created by kav on 17/06/07.
  */
-public class ScanThread extends Thread {
+public class BluetoothScanner implements IBluetoothScanner {
+    private static volatile BluetoothScanner instance;
+    private Thread scanThread = null;
     private BluetoothAdapter bluetoothAdapter = null;
     private BluetoothLeScanner bluetoothLeScanner = null;
     private ScanCallback scanCallBack = null;
@@ -41,40 +38,73 @@ public class ScanThread extends Thread {
     private int delayScan = 5000;
     private Context context = null;
     private boolean isFirst = true;
-    private ScanThread currentThread = null;
     private String TAG = "SCAN THREAD";
     private IUnlock unlockClient = null;
+    private Observer observer = null;
+    private BluetoothDevice foundDevice = null;
+    private boolean isObserverSuccess = false;
 
 
-    public ScanThread(Context context, IUnlock unlockClient) {
-        this.unlockClient = unlockClient;
-        this.context = context;
+    public BluetoothDevice getFoundDevice() {
+        return foundDevice;
+    }
+
+    public void setOnScanResultListener(Observer observer) {
+        this.observer = observer;
+    }
+
+    public static BluetoothScanner getInstance() {
+        BluetoothScanner localInstance = instance;
+        if (localInstance == null) {
+            synchronized (BluetoothScanner.class) {
+                localInstance = instance;
+                if (localInstance == null) {
+                    instance = localInstance = new BluetoothScanner();
+                }
+            }
+        }
+        return localInstance;
     }
 
     @Override
-    public void run() {
-        Log.e(TAG, "START SCAN");
-        unlockClient.stopChecking(context);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(delayScan);
-                } catch (InterruptedException e) {
-                    onDestroy();
+    public void startScan(Context contextIn, IUnlock unlockClientIn) {
+        this.context = contextIn;
+        this.unlockClient = unlockClientIn;
+        if (scanThread == null) {
+            scanThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.e(TAG, "START SCAN");
+                    unlockClient.stopChecking(context);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                Thread.sleep(delayScan);
+                            } catch (InterruptedException e) {
+                                onDestroy();
+                            }
+                            onDestroy();
+                        }
+                    }).start();
+                    initCallBack();
+                    bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                    bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+                    if (bluetoothLeScanner != null)
+                        bluetoothLeScanner.stopScan(scanCallBack);
+                    scanInHighMode(bluetoothLeScanner);
                 }
-                onDestroy();
-            }
-        }).start();
-        initCallBack();
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
-        if (bluetoothLeScanner != null)
-            bluetoothLeScanner.stopScan(scanCallBack);
-        scanInHighMode(bluetoothLeScanner);
+            });
+            scanThread.start();
+        }
     }
 
-    public void initCallBack() {
+    @Override
+    public void stopScan() {
+        onDestroy();
+    }
+
+    private void initCallBack() {
         scanCallBack = new ScanCallback() {
             List<Integer> swimWindow = null;
 
@@ -100,11 +130,14 @@ public class ScanThread extends Thread {
                     rssiSwimWindow /= swimWindow.size();
 
                     if (rssiSwimWindow > distanceHigh) {
-                        Log.e(TAG, "Device found!!!");
-                        sendNotification(result);
+                        Log.e(TAG, "DEVICE FOUND!!!");
                         synchronized (this) {
                             if (isFirst) {
-                                new ConnectThread(context, result.getDevice()).start();
+                                if (observer != null) {
+                                    foundDevice = result.getDevice();
+                                    observer.onSuccess();
+                                    isObserverSuccess = true;
+                                }
                                 isFirst = false;
                             }
                         }
@@ -136,29 +169,21 @@ public class ScanThread extends Thread {
         return false;
     }
 
-    private void sendNotification(ScanResult result) {
-        String message = "Имя:" + result.getDevice().getName() +
-                "\nАдресс:" + result.getDevice().getAddress() +
-                "\nUUID:" + result.getScanRecord().getServiceUuids().get(0).getUuid().toString();
-        NotificationCompat.Builder notificationCompatBuilder = new NotificationCompat.Builder(context);
-        notificationCompatBuilder.setSmallIcon(R.mipmap.ic_launcher);
-        notificationCompatBuilder.setContentTitle("Найдено устройство");
-        notificationCompatBuilder.setContentText(message);
-        notificationCompatBuilder.setDefaults(Notification.DEFAULT_SOUND);
-        notificationCompatBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(message));
-        NotificationManagerCompat.from(context).notify("Tag", MainActivity.notificationID, notificationCompatBuilder.build());
-        MainActivity.notificationID++;
-    }
+    private void onDestroy() {
+        isFirst = true;
+        if (observer != null && !isObserverSuccess)
+            observer.onFail();
 
-    public void onDestroy() {
         if (bluetoothLeScanner != null) {
             bluetoothLeScanner.stopScan(scanCallBack);
             bluetoothLeScanner = null;
         }
-        if (currentThread != null && !currentThread.isInterrupted()) {
-            currentThread.interrupt();
-            currentThread = null;
+        if (scanThread != null && !scanThread.isInterrupted()) {
+            scanThread.interrupt();
+            scanThread = null;
         }
+        observer = null;
+        isObserverSuccess = false;
         unlockClient.startChecking(context);
         Log.e(TAG, "DESTROYED!");
     }

@@ -17,26 +17,26 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ProgressBar;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.kav.bluetoothexample.R;
+import com.example.kav.bluetoothexample.UnlockService.AccelerometerUnlock;
 import com.example.kav.bluetoothexample.UnlockService.IUnlock;
 import com.example.kav.bluetoothexample.UnlockService.ScreenUnlock;
-import com.example.kav.bluetoothexample.UnlockService.AccelerometerUnlock;
-import com.example.kav.bluetoothexample.R;
-
 
 public class MainActivity extends AppCompatActivity {
     public static final String ADDRESS_INTENT = "ADDRESS";
     public static final String NAME_INTENT = "NAME_INTENT";
     public static final String RSSI_INTENT = "RSSI";
     public static final String INTENT_FILTER_RSSI = "INTENT_FILTER_RSSI";
-    public static final String PROGRESS_BAR_STATUS = "PROGRESS_BAR_STATUS";
     public static final String POWER_COUNT = "POWER_COUNT";
     public static int notificationID = 0;
     private static final int REQUEST_ENABLE_BT = 0;
@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     private RadioGroup radioGroup = null;
     private IUnlock iUnlock = null;
     private ProgressBar progressBar = null;
+    private CardView cardView = null;
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -61,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
         checkBluetooth();
         goToBluetoothRequestPermission();
         registerBroadcastReceiver();
+
     }
 
     private void goToBluetoothRequestPermission() {
@@ -87,12 +89,17 @@ public class MainActivity extends AppCompatActivity {
         rssiText = (TextView) findViewById(R.id.textRssi);
         powerText = (TextView) findViewById(R.id.textPower);
         addressText = (TextView) findViewById(R.id.textAddress);
+        cardView = (CardView) findViewById(R.id.card1);
         buttonBigGraph = (FloatingActionButton) findViewById(R.id.buttonBigGraph);
         buttonBigGraph.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(getBaseContext(), GraphActivity.class);
-                startActivity(intent);
+                /*Intent intent = new Intent(getBaseContext(), GraphActivity.class);
+                startActivity(intent);*/
+                Animation animRotateIn_icon = AnimationUtils.loadAnimation(getBaseContext(),
+                        R.anim.anim_activity);
+
+                buttonBigGraph.startAnimation(animRotateIn_icon);
             }
         });
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
@@ -171,4 +178,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+
+    public void test() {
+    }
 }

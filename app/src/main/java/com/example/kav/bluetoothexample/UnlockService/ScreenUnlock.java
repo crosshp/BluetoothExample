@@ -9,7 +9,9 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.example.kav.bluetoothexample.Service.ScanThread;
+import com.example.kav.bluetoothexample.Interface.BluetoothConnector;
+import com.example.kav.bluetoothexample.Interface.BluetoothScanner;
+import com.example.kav.bluetoothexample.Interface.Observer;
 
 /**
  * Created by kav on 16/06/22.
@@ -18,6 +20,7 @@ public class ScreenUnlock extends Service implements IUnlock {
     private String action = Intent.ACTION_USER_PRESENT;
     private BroadcastReceiver unlockReceiver = null;
     private ScreenUnlock screenUnlock = this;
+    private String TAG = "SCREEN UNLOCK";
 
 
     @Nullable
@@ -33,7 +36,31 @@ public class ScreenUnlock extends Service implements IUnlock {
             unlockReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    new ScanThread(getBaseContext(), screenUnlock).start();
+                    BluetoothScanner.getInstance().startScan(getBaseContext(), screenUnlock);
+                    BluetoothScanner.getInstance().setOnScanResultListener(new Observer() {
+                        @Override
+                        public void onSuccess() {
+                            Log.e(TAG+" OBSERVER", "ON SUCCESS");
+                            BluetoothConnector.getInstance().connect(BluetoothScanner.getInstance().getFoundDevice(), getBaseContext());
+                            BluetoothConnector.getInstance().setOnScanResultListener(new Observer() {
+                                @Override
+                                public void onSuccess() {
+                                    Log.e(TAG+" OBSERVER", "ON SUCCESS CONNECT");
+                                }
+
+                                @Override
+                                public void onFail() {
+                                    Log.e(TAG+" OBSERVER", "ON FAIL CONNECT");
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onFail() {
+                            Log.e(TAG+" OBSERVER", "ON FAIL");
+                        }
+                    });
+                    // new ScanThread(getBaseContext(), screenUnlock).start();
                 }
             };
             registerReceiver(unlockReceiver, new IntentFilter(action));
