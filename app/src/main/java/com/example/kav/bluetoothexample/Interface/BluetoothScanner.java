@@ -112,7 +112,6 @@ public class BluetoothScanner implements IBluetoothScanner {
             public void onScanResult(int callbackType, final ScanResult result) {
                 List<ParcelUuid> uuids = result.getScanRecord().getServiceUuids();
                 if (hasSystemUUID(uuids)) {
-                    Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
                     if (!resultsRssiMap.containsKey(result.getDevice().getAddress())) {
                         swimWindow = new ArrayList<>();
                         resultsRssiMap.put(result.getDevice().getAddress(), swimWindow);
@@ -143,11 +142,6 @@ public class BluetoothScanner implements IBluetoothScanner {
                         }
                         onDestroy();
                     }
-                    intent.putExtra(MainActivity.ADDRESS_INTENT, result.getDevice().getAddress());
-                    intent.putExtra(MainActivity.NAME_INTENT, result.getDevice().getName());
-                    intent.putExtra(MainActivity.RSSI_INTENT, (Integer) rssiSwimWindow);
-                    intent.putExtra(MainActivity.POWER_COUNT, (Integer) result.getScanRecord().getTxPowerLevel());
-                    context.sendBroadcast(intent);
                 }
             }
         };

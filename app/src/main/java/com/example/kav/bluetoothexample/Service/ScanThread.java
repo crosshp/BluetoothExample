@@ -2,7 +2,6 @@ package com.example.kav.bluetoothexample.Service;
 
 import android.app.Notification;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
@@ -13,7 +12,6 @@ import android.content.Intent;
 import android.os.ParcelUuid;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
-import android.support.v7.widget.CardView;
 import android.util.Log;
 
 import com.example.kav.bluetoothexample.Activity.MainActivity;

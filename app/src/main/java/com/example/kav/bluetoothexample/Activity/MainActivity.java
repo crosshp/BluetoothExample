@@ -32,6 +32,7 @@ import com.example.kav.bluetoothexample.UnlockService.AccelerometerUnlock;
 import com.example.kav.bluetoothexample.UnlockService.IUnlock;
 import com.example.kav.bluetoothexample.UnlockService.ScreenUnlock;
 
+
 public class MainActivity extends AppCompatActivity {
     public static final String ADDRESS_INTENT = "ADDRESS";
     public static final String NAME_INTENT = "NAME_INTENT";

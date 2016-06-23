@@ -14,6 +14,7 @@ import android.view.OrientationEventListener;
 import com.example.kav.bluetoothexample.Interface.BluetoothConnector;
 import com.example.kav.bluetoothexample.Interface.BluetoothScanner;
 import com.example.kav.bluetoothexample.Interface.Observer;
+import com.example.kav.bluetoothexample.Service.ScanThread;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -164,31 +165,8 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     }
 
     private void startScanService() {
-        BluetoothScanner.getInstance().startScan(getBaseContext(), this);
-        BluetoothScanner.getInstance().setOnScanResultListener(new Observer() {
-            @Override
-            public void onSuccess() {
-                Log.e(TAG+" OBSERVER", "ON SUCCESS");
-                BluetoothConnector.getInstance().connect(BluetoothScanner.getInstance().getFoundDevice(), getBaseContext());
-                BluetoothConnector.getInstance().setOnScanResultListener(new Observer() {
-                    @Override
-                    public void onSuccess() {
-                        Log.e(TAG+" OBSERVER", "ON SUCCESS CONNECT");
-                    }
 
-                    @Override
-                    public void onFail() {
-                        Log.e(TAG+" OBSERVER", "ON FAIL CONNECT");
-                    }
-                });
-            }
-
-            @Override
-            public void onFail() {
-                Log.e(TAG+" OBSERVER", "ON FAIL");
-            }
-        });
-        // new ScanThread(getBaseContext(), this).start();
+         new ScanThread(getBaseContext(), this).start();
     }
 
     @Override
