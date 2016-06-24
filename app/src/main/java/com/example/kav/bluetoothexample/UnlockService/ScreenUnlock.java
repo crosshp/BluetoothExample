@@ -9,10 +9,9 @@ import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.example.kav.bluetoothexample.Interface.BluetoothConnector;
-import com.example.kav.bluetoothexample.Interface.BluetoothScanner;
-import com.example.kav.bluetoothexample.Interface.Observer;
 import com.example.kav.bluetoothexample.Service.ScanThread;
+
+import java.util.Iterator;
 
 /**
  * Created by kav on 16/06/22.
@@ -38,7 +37,6 @@ public class ScreenUnlock extends Service implements IUnlock {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     new ScanThread(getBaseContext(), screenUnlock).start();
-                    //
                 }
             };
             registerReceiver(unlockReceiver, new IntentFilter(action));

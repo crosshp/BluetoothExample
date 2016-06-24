@@ -11,9 +11,6 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.OrientationEventListener;
 
-import com.example.kav.bluetoothexample.Interface.BluetoothConnector;
-import com.example.kav.bluetoothexample.Interface.BluetoothScanner;
-import com.example.kav.bluetoothexample.Interface.Observer;
 import com.example.kav.bluetoothexample.Service.ScanThread;
 
 import java.util.ArrayList;
@@ -165,7 +162,6 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     }
 
     private void startScanService() {
-
          new ScanThread(getBaseContext(), this).start();
     }
 
