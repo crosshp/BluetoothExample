@@ -4,6 +4,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.Vibrator;
@@ -11,7 +12,8 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.OrientationEventListener;
 
-import com.example.kav.bluetoothexample.Service.ScanThread;
+import com.example.kav.bluetoothexample.Service.ScanThreadJellyBean;
+import com.example.kav.bluetoothexample.Service.ScanThreadM;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +26,7 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     private long startTime = 0;
     private int startPoint = 0;
     private int deltaRotate = 90;
-    private int delayTimeRotate = 500;
+    private int delayTimeRotate = 750;
     private long firstTime = 0;
     long firstVibrateMilliseconds = 20;
     private final int dispersionOrientation = 15;
@@ -162,7 +164,10 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     }
 
     private void startScanService() {
-         new ScanThread(getBaseContext(), this).start();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            new ScanThreadM(getBaseContext(), this).start();
+        else new ScanThreadJellyBean(getBaseContext(), this).start();
+
     }
 
     @Override

@@ -20,6 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
         android:clickable="true"
+        android:foreground="?android:attr/selectableItemBackgroundBorderless"
         android:translationZ="7dp"
         app:cardBackgroundColor="@color/cardColor"
         app:cardCornerRadius="0dp"
@@ -156,6 +157,7 @@
         android:layout_below="@+id/card1"
         android:layout_margin="10dp"
         android:clickable="true"
+        android:foreground="?android:attr/selectableItemBackgroundBorderless"
         app:cardBackgroundColor="@color/cardColor"
         app:cardCornerRadius="0dp"
         app:cardElevation="15dp">

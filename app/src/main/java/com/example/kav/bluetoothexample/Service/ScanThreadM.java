@@ -1,5 +1,6 @@
 package com.example.kav.bluetoothexample.Service;
 
+import android.annotation.TargetApi;
 import android.app.Notification;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -9,6 +10,7 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.ParcelUuid;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
@@ -27,7 +29,7 @@ import java.util.UUID;
 /**
  * Created by kav on 16/06/02.
  */
-public class ScanThread extends Thread {
+public class ScanThreadM extends Thread {
     private BluetoothAdapter bluetoothAdapter = null;
     private BluetoothLeScanner bluetoothLeScanner = null;
     private ScanCallback scanCallBack = null;
@@ -39,16 +41,17 @@ public class ScanThread extends Thread {
     private int delayScan = 5000;
     private Context context = null;
     private boolean isFirst = true;
-    private ScanThread currentThread = null;
+    private ScanThreadM currentThread = null;
     private String TAG = "SCAN THREAD";
     private IUnlock unlockClient = null;
 
 
-    public ScanThread(Context context, IUnlock unlockClient) {
+    public ScanThreadM(Context context, IUnlock unlockClient) {
         this.unlockClient = unlockClient;
         this.context = context;
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void run() {
         Log.e(TAG, "START SCAN");
@@ -72,6 +75,7 @@ public class ScanThread extends Thread {
         scanInHighMode(bluetoothLeScanner);
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void initCallBack() {
         scanCallBack = new ScanCallback() {
             List<Integer> swimWindow = null;
@@ -118,6 +122,7 @@ public class ScanThread extends Thread {
         };
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void scanInHighMode(BluetoothLeScanner bluetoothLeScanner) {
         ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
         bluetoothLeScanner.startScan(new ArrayList<ScanFilter>(), scanSettings, scanCallBack);
@@ -134,6 +139,7 @@ public class ScanThread extends Thread {
         return false;
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private void sendNotification(ScanResult result) {
         String message = "Имя:" + result.getDevice().getName() +
                 "\nАдресс:" + result.getDevice().getAddress() +
@@ -148,6 +154,7 @@ public class ScanThread extends Thread {
         MainActivity.notificationID++;
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public void onDestroy() {
         if (bluetoothLeScanner != null) {
             bluetoothLeScanner.stopScan(scanCallBack);

@@ -5,13 +5,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.example.kav.bluetoothexample.Service.ScanThread;
-
-import java.util.Iterator;
+import com.example.kav.bluetoothexample.Service.ScanThreadJellyBean;
+import com.example.kav.bluetoothexample.Service.ScanThreadM;
 
 /**
  * Created by kav on 16/06/22.
@@ -36,7 +36,9 @@ public class ScreenUnlock extends Service implements IUnlock {
             unlockReceiver = new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    new ScanThread(getBaseContext(), screenUnlock).start();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+                        new ScanThreadM(getBaseContext(), screenUnlock).start();
+                    else new ScanThreadJellyBean(getBaseContext(), screenUnlock).start();
                 }
             };
             registerReceiver(unlockReceiver, new IntentFilter(action));
