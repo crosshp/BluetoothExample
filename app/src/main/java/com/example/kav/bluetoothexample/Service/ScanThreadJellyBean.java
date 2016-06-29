@@ -38,11 +38,8 @@ import java.util.concurrent.TimeUnit;
 public class ScanThreadJellyBean extends Thread {
     private BluetoothAdapter bluetoothAdapter = null;
     private BluetoothAdapter.LeScanCallback scanCallBack = null;
-    private int distanceHigh = -52;
+    private int distanceHigh = -60;
     private final UUID SYSTEM_UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
-    private final UUID MODULE_UUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");
-    private final UUID BASE_UUID = UUID.fromString("00000000-0000-1000-8000-00805F9B34FB");
-    private UUID[] SYSTEM_UUIDS = {SYSTEM_UUID, MODULE_UUID, BASE_UUID};
     private Map<String, List<Integer>> resultsRssiMap = new HashMap<>();
     private int rssiSwimWindow = 0;
     private int delayScan = 5000;
@@ -57,6 +54,15 @@ public class ScanThreadJellyBean extends Thread {
     public ScanThreadJellyBean(Context context, IUnlock unlockClient) {
         this.unlockClient = unlockClient;
         this.context = context;
+    }
+
+    private boolean hasSystemUUID(List<ParcelUuid> uuids) {
+        for (ParcelUuid uuid : uuids) {
+            if (uuid.getUuid().toString().equals(SYSTEM_UUID.toString())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -80,41 +86,42 @@ public class ScanThreadJellyBean extends Thread {
             @Override
             public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
                 List<ParcelUuid> uuids = BluetoothScanRecord.parseFromBytes(scanRecord).getServiceUuids();
-                Log.e("UUID", uuids.get(0).getUuid().toString());
-                Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
-                if (!resultsRssiMap.containsKey(device.getAddress())) {
-                    swimWindow = new ArrayList<>();
-                    resultsRssiMap.put(device.getAddress(), swimWindow);
-                } else {
-                    swimWindow = resultsRssiMap.get(device.getAddress());
-                }
-                swimWindow.add(rssi);
-                if (swimWindow.size() == 5) {
-                    swimWindow.remove(0);
-                }
-                rssiSwimWindow = 0;
-                for (Integer currentRSSI : swimWindow) {
-                    rssiSwimWindow += currentRSSI;
-                }
-                rssiSwimWindow /= swimWindow.size();
-
-                if (rssiSwimWindow > distanceHigh) {
-                    Log.e(TAG, "Device found!!!");
-                    sendNotification(device);
-                    synchronized (this) {
-                        if (isFirst) {
-                            new ConnectThread(context, device).start();
-                            isFirst = false;
-                        }
+                if (hasSystemUUID(uuids)) {
+                    Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
+                    if (!resultsRssiMap.containsKey(device.getAddress())) {
+                        swimWindow = new ArrayList<>();
+                        resultsRssiMap.put(device.getAddress(), swimWindow);
+                    } else {
+                        swimWindow = resultsRssiMap.get(device.getAddress());
                     }
-                    onDestroy();
-                }
-                intent.putExtra(MainActivity.ADDRESS_INTENT, device.getAddress());
-                intent.putExtra(MainActivity.NAME_INTENT, device.getName());
-                intent.putExtra(MainActivity.RSSI_INTENT, (Integer) rssiSwimWindow);
-                intent.putExtra(MainActivity.POWER_COUNT, -100);
-                context.sendBroadcast(intent);
+                    swimWindow.add(rssi);
+                    if (swimWindow.size() == 5) {
+                        swimWindow.remove(0);
+                    }
+                    rssiSwimWindow = 0;
+                    for (Integer currentRSSI : swimWindow) {
+                        rssiSwimWindow += currentRSSI;
+                    }
+                    rssiSwimWindow /= swimWindow.size();
 
+                    if (rssi > distanceHigh) {
+                        Log.e(TAG, "Device found!!!");
+                        //sendNotification(device);
+                        synchronized (this) {
+                            if (isFirst) {
+                                Log.e(TAG, "Device Send!!!");
+                                new ConnectThread(context, device).start();
+                                isFirst = false;
+                            }
+                        }
+                        onDestroy();
+                    }
+                    intent.putExtra(MainActivity.ADDRESS_INTENT, device.getAddress());
+                    intent.putExtra(MainActivity.NAME_INTENT, device.getName());
+                    intent.putExtra(MainActivity.RSSI_INTENT, (Integer) rssiSwimWindow);
+                    intent.putExtra(MainActivity.POWER_COUNT, -100);
+                    context.sendBroadcast(intent);
+                }
             }
         };
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
