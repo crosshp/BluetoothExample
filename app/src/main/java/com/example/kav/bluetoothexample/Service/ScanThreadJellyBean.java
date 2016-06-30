@@ -104,6 +104,7 @@ public class ScanThreadJellyBean extends Thread {
         if (bluetoothAdapter == null) {
             final BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
             bluetoothAdapter = bluetoothManager.getAdapter();
+            bluetoothAdapter.enable();
         }
         bluetoothAdapter.startLeScan(scanCallback);
     }
@@ -122,6 +123,7 @@ public class ScanThreadJellyBean extends Thread {
     public void onDestroy() {
         if (bluetoothAdapter != null) {
             bluetoothAdapter.stopLeScan(scanCallback);
+            bluetoothAdapter.disable();
             bluetoothAdapter = null;
         }
         if (currentThread != null && !currentThread.isInterrupted()) {
