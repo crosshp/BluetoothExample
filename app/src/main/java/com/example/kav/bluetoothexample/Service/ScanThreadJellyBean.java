@@ -3,9 +3,11 @@ package com.example.kav.bluetoothexample.Service;
 import android.app.Notification;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
@@ -37,11 +39,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class ScanThreadJellyBean extends Thread {
     private BluetoothAdapter bluetoothAdapter = null;
-    private BluetoothAdapter.LeScanCallback scanCallBack = null;
-    private int distanceHigh = -60;
+    private int distanceHigh = -63;
     private final UUID SYSTEM_UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
-    private Map<String, List<Integer>> resultsRssiMap = new HashMap<>();
-    private int rssiSwimWindow = 0;
     private int delayScan = 5000;
     private Context context = null;
     private boolean isFirst = true;
@@ -49,11 +48,39 @@ public class ScanThreadJellyBean extends Thread {
     private String TAG = "SCAN THREAD";
     private IUnlock unlockClient = null;
     private ScheduledThreadPoolExecutor stopThread;
+    private String phoneNumber = "";
+    private BluetoothAdapter.LeScanCallback scanCallback = null;
 
 
-    public ScanThreadJellyBean(Context context, IUnlock unlockClient) {
+    public ScanThreadJellyBean(Context contextIN, IUnlock unlockClient, String phoneNumberIN) {
         this.unlockClient = unlockClient;
-        this.context = context;
+        this.context = contextIN;
+        this.phoneNumber = phoneNumberIN;
+        scanCallback = new BluetoothAdapter.LeScanCallback() {
+            @Override
+            public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
+                BluetoothScanRecord bluetoothScanRecord = BluetoothScanRecord.parseFromBytes(scanRecord);
+                List<ParcelUuid> uuids = bluetoothScanRecord.getServiceUuids();
+                if (hasSystemUUID(uuids)) {
+                    Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
+                    if (rssi > distanceHigh) {
+                        Log.e(TAG, "Device found!!!");
+                        synchronized (ScanThreadJellyBean.class) {
+                            if (isFirst) {
+                                new ConnectThread(context, device, phoneNumber).start();
+                                isFirst = false;
+                            }
+                        }
+                        onDestroy();
+                    }
+                    intent.putExtra(MainActivity.ADDRESS_INTENT, device.getAddress());
+                    intent.putExtra(MainActivity.NAME_INTENT, device.getName());
+                    intent.putExtra(MainActivity.RSSI_INTENT, (Integer) rssi);
+                    intent.putExtra(MainActivity.POWER_COUNT, (Integer) bluetoothScanRecord.getTxPowerLevel());
+                    context.sendBroadcast(intent);
+                }
+            }
+        };
     }
 
     private boolean hasSystemUUID(List<ParcelUuid> uuids) {
@@ -69,97 +96,42 @@ public class ScanThreadJellyBean extends Thread {
     public void run() {
         Log.e(TAG, "START SCAN");
         unlockClient.stopChecking(context);
-        if (stopThread == null || stopThread.isShutdown()) {
-            stopThread = new ScheduledThreadPoolExecutor(1);
-        } else {
-            return;
-        }
-        stopThread.schedule(new Runnable() {
-            public void run() {
-                onDestroy();
-            }
-        }, delayScan, TimeUnit.MILLISECONDS);
-
-        scanCallBack = new BluetoothAdapter.LeScanCallback() {
-            List<Integer> swimWindow = null;
-
-            @Override
-            public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-                List<ParcelUuid> uuids = BluetoothScanRecord.parseFromBytes(scanRecord).getServiceUuids();
-                if (hasSystemUUID(uuids)) {
-                    Intent intent = new Intent(MainActivity.INTENT_FILTER_RSSI);
-                    if (!resultsRssiMap.containsKey(device.getAddress())) {
-                        swimWindow = new ArrayList<>();
-                        resultsRssiMap.put(device.getAddress(), swimWindow);
-                    } else {
-                        swimWindow = resultsRssiMap.get(device.getAddress());
-                    }
-                    swimWindow.add(rssi);
-                    if (swimWindow.size() == 5) {
-                        swimWindow.remove(0);
-                    }
-                    rssiSwimWindow = 0;
-                    for (Integer currentRSSI : swimWindow) {
-                        rssiSwimWindow += currentRSSI;
-                    }
-                    rssiSwimWindow /= swimWindow.size();
-
-                    if (rssi > distanceHigh) {
-                        Log.e(TAG, "Device found!!!");
-                        //sendNotification(device);
-                        synchronized (this) {
-                            if (isFirst) {
-                                Log.e(TAG, "Device Send!!!");
-                                new ConnectThread(context, device).start();
-                                isFirst = false;
-                            }
-                        }
-                        onDestroy();
-                    }
-                    intent.putExtra(MainActivity.ADDRESS_INTENT, device.getAddress());
-                    intent.putExtra(MainActivity.NAME_INTENT, device.getName());
-                    intent.putExtra(MainActivity.RSSI_INTENT, (Integer) rssiSwimWindow);
-                    intent.putExtra(MainActivity.POWER_COUNT, -100);
-                    context.sendBroadcast(intent);
-                }
-            }
-        };
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        bluetoothAdapter.startLeScan(scanCallBack);
+        executeStopThread();
+        startScan();
     }
 
+    private void startScan() {
+        if (bluetoothAdapter == null) {
+            final BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+            bluetoothAdapter = bluetoothManager.getAdapter();
+        }
+        bluetoothAdapter.startLeScan(scanCallback);
+    }
 
-    private void sendNotification(BluetoothDevice device) {
-        String message = "Имя:" + device.getName() +
-                "\nАдресс:" + device.getAddress() +
-                "\nUUID:" + device.getUuids()[0].toString();
-        NotificationCompat.Builder notificationCompatBuilder = new NotificationCompat.Builder(context);
-        notificationCompatBuilder.setSmallIcon(R.mipmap.ic_launcher);
-        notificationCompatBuilder.setContentTitle("Найдено устройство");
-        notificationCompatBuilder.setContentText(message);
-        notificationCompatBuilder.setDefaults(Notification.DEFAULT_SOUND);
-        notificationCompatBuilder.setStyle(new NotificationCompat.BigTextStyle().bigText(message));
-        NotificationManagerCompat.from(context).notify("Tag", MainActivity.notificationID, notificationCompatBuilder.build());
-        MainActivity.notificationID++;
+    private void executeStopThread() {
+        if (stopThread == null || stopThread.isShutdown()) {
+            stopThread = new ScheduledThreadPoolExecutor(1);
+            stopThread.schedule(new Runnable() {
+                public void run() {
+                    onDestroy();
+                }
+            }, delayScan, TimeUnit.MILLISECONDS);
+        }
     }
 
     public void onDestroy() {
         if (bluetoothAdapter != null) {
-            bluetoothAdapter.stopLeScan(scanCallBack);
+            bluetoothAdapter.stopLeScan(scanCallback);
             bluetoothAdapter = null;
         }
         if (currentThread != null && !currentThread.isInterrupted()) {
             currentThread.interrupt();
             currentThread = null;
         }
-        unlockClient.startChecking(context);
+        unlockClient.startChecking(context, phoneNumber);
         Log.e(TAG, "DESTROYED!");
     }
 
-
-    public interface BluetoothScannerResult {
-        void bluetoothDeviceFound(final BluetoothDevice device);
-    }
 
     private static class BluetoothScanRecord {
         // The following data type values are assigned by Bluetooth SIG.
@@ -256,7 +228,7 @@ public class ScanThreadJellyBean extends Thread {
          * Returns the transmission power level of the packet in dBm. Returns {@link Integer#MIN_VALUE}
          * if the field is not setLevel. This value can be used to calculate the path loss of a received
          * packet using the following equation:
-         * <p/>
+         * <p>
          * <code>pathloss = txPowerLevel - rssi</code>
          */
         public int getTxPowerLevel() {
@@ -294,9 +266,9 @@ public class ScanThreadJellyBean extends Thread {
 
         /**
          * Parse scan record bytes to {@link BluetoothScanRecord}.
-         * <p/>
+         * <p>
          * The format is defined in Bluetooth 4.1 specification, Volume 3, Part C, Section 11 and 18.
-         * <p/>
+         * <p>
          * All numerical multi-byte entities and values shall use little-endian <strong>byte</strong>
          * order.
          *

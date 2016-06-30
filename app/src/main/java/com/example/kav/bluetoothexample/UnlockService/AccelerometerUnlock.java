@@ -28,7 +28,7 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     private int deltaRotate = 90;
     private int delayTimeRotate = 750;
     private long firstTime = 0;
-    long firstVibrateMilliseconds = 20;
+    private long firstVibrateMilliseconds = 20;
     private final int dispersionOrientation = 15;
     private List<Integer> upPosition = new ArrayList<>(dispersionOrientation);
     private List<Integer> downPosition = new ArrayList<>(dispersionOrientation);
@@ -42,6 +42,7 @@ public class AccelerometerUnlock extends Service implements IUnlock {
     private boolean isScanStart = false;
     private OrientationEventListener orientationEventListener = null;
     private String TAG = "GYRO SERVICE";
+    private static String phoneNumber = "";
 
     @Nullable
     @Override
@@ -49,9 +50,9 @@ public class AccelerometerUnlock extends Service implements IUnlock {
         return null;
     }
 
+
     @Override
     public void onCreate() {
-        super.onCreate();
         Log.e(TAG, "GYRO START!!!!   GYRO START!!!!   GYRO START!!!!");
         initDispersionArrays();
         powerManager = (PowerManager) getSystemService(POWER_SERVICE);
@@ -165,13 +166,14 @@ public class AccelerometerUnlock extends Service implements IUnlock {
 
     private void startScanService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
-            new ScanThreadM(getBaseContext(), this).start();
-        else new ScanThreadJellyBean(getBaseContext(), this).start();
+            new ScanThreadM(getBaseContext(), this, phoneNumber).start();
+        else new ScanThreadJellyBean(getBaseContext(), this, phoneNumber).start();
 
     }
 
     @Override
-    public void startChecking(Context context) {
+    public void startChecking(Context context, String phoneNumber) {
+        this.phoneNumber = phoneNumber;
         context.startService(new Intent(context, AccelerometerUnlock.class));
     }
 

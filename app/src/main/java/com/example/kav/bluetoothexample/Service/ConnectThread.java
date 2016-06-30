@@ -9,6 +9,7 @@ import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 /**
@@ -20,15 +21,20 @@ public class ConnectThread extends Thread {
     private BluetoothDevice device = null;
     private BluetoothGatt bluetoothGatt = null;
     private String TAG = "CONNECT SERVICE";
-    private String message = "123451";
-    private byte[] messageInByte = message.getBytes();
-    private int delayConnect = 5000;
+    private String message = "";
+    private int delayConnect = 15000;
+    private final ByteQueue queue = new ByteQueue(1024);
+    private volatile boolean sending;
+    private final byte[] buffer = new byte[20];
     private Context context = null;
     private ConnectThread currentThread = this;
+    BluetoothGattCharacteristic bluetoothGattCharacteristic = null;
 
-    public ConnectThread(Context context, BluetoothDevice device) {
+    public ConnectThread(Context context, BluetoothDevice device, String phoneNumber) {
         this.context = context;
         this.device = device;
+       // message = "Demo" + phoneNumber + '\r';
+        message = "123456";
     }
 
     @Override
@@ -49,45 +55,67 @@ public class ConnectThread extends Thread {
         bluetoothGatt = device.connectGatt(context, false, new BluetoothGattCallback() {
             @Override
             public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-                if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    Log.e(TAG, "CONNECT!");
-                    bluetoothGatt.discoverServices();
-
-                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                    Log.e(TAG, "Disconnected from GATT server.");
-                    onDestroy();
+                switch (newState) {
+                    case BluetoothProfile.STATE_CONNECTED:
+                        if (bluetoothGattCharacteristic == null)
+                            gatt.discoverServices();
+                        break;
+                    case BluetoothProfile.STATE_DISCONNECTED:
+                        Log.e(TAG, "Disconnected from GATT server.");
+                        onDestroy();
+                        break;
                 }
-                super.onConnectionStateChange(gatt, status, newState);
             }
 
             @Override
             public void onServicesDiscovered(BluetoothGatt gatt, int status) {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
-                    BluetoothGattCharacteristic bluetoothGattCharacteristic = bluetoothGatt.getService(SYSTEM_UUID).getCharacteristic(MODULE_UUID);
+                    Log.e("SERVICE","SUCCESS DISCOVER");
+                    bluetoothGattCharacteristic = bluetoothGatt.getService(SYSTEM_UUID).getCharacteristic(MODULE_UUID);
                     if ((bluetoothGattCharacteristic.getProperties() & (BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE | BluetoothGattCharacteristic.PROPERTY_NOTIFY)) > 0) {
                         bluetoothGatt.setCharacteristicNotification(bluetoothGattCharacteristic, true);
                         bluetoothGatt.connect();
-                        bluetoothGattCharacteristic.setValue(messageInByte);
-                        boolean isWrite = gatt.writeCharacteristic(bluetoothGattCharacteristic);
-                        if (!isWrite) {
-                            Log.e(TAG, "CANNOT WRITE!");
-                            onDestroy();
-                        }
+                        boolean result = queue.write(message.getBytes());
+                        if (result)
+                            process(bluetoothGattCharacteristic, bluetoothGatt);
                     }
                 }
-                super.onServicesDiscovered(gatt, status);
             }
 
             @Override
             public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
                 Log.e(TAG, "CharacteristicRead");
-                super.onCharacteristicRead(gatt, characteristic, status);
+            }
+
+            private void process(BluetoothGattCharacteristic gattPort, BluetoothGatt gatt) {
+                if (!sending) {
+                    int size = queue.read(buffer);
+                    if (size > 0) {
+                        sending = true;
+                        gattPort.setValue(size == buffer.length ? buffer : Arrays.copyOfRange(buffer, 0, size));
+                        gatt.writeCharacteristic(gattPort);
+                        Log.v("Channel", "sent, size: " + String.valueOf(size) + ": " + Hex.toString(Arrays.copyOfRange(buffer, 0, size)));
+                    }
+                }
             }
 
             @Override
             public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-                Log.e(TAG, "CharacteristicWrite");
-                super.onCharacteristicWrite(gatt, characteristic, status);
+                sending = false;
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.v("Channel", "written");
+                    process(characteristic, gatt);
+                } else {
+                    queue.clear();
+                }
+            }
+
+            @Override
+            public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+                byte[] data = characteristic.getValue();
+                if (data.length > 0) {
+                    Log.v("Channel", "receive, size: " + String.valueOf(data.length) + ": " + Hex.toString(data));
+                }
             }
         });
     }

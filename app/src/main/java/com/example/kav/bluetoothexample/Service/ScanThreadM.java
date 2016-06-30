@@ -33,7 +33,7 @@ public class ScanThreadM extends Thread {
     private BluetoothAdapter bluetoothAdapter = null;
     private BluetoothLeScanner bluetoothLeScanner = null;
     private ScanCallback scanCallBack = null;
-    private int distanceHigh = -52;
+    private int distanceHigh = -63;
     private final UUID SYSTEM_UUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
     private String[] systemUUIDs = new String[]{SYSTEM_UUID.toString()};
     private Map<String, List<Integer>> resultsRssiMap = new HashMap<>();
@@ -44,12 +44,15 @@ public class ScanThreadM extends Thread {
     private ScanThreadM currentThread = null;
     private String TAG = "SCAN THREAD";
     private IUnlock unlockClient = null;
+    private String phoneNumber = "";
 
 
-    public ScanThreadM(Context context, IUnlock unlockClient) {
+    public ScanThreadM(Context context, IUnlock unlockClient, String phoneNumber) {
         this.unlockClient = unlockClient;
         this.context = context;
+        this.phoneNumber = phoneNumber;
     }
+
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -106,7 +109,7 @@ public class ScanThreadM extends Thread {
                         sendNotification(result);
                         synchronized (this) {
                             if (isFirst) {
-                                new ConnectThread(context, result.getDevice()).start();
+                                new ConnectThread(context, result.getDevice(), phoneNumber).start();
                                 isFirst = false;
                             }
                         }
@@ -164,7 +167,7 @@ public class ScanThreadM extends Thread {
             currentThread.interrupt();
             currentThread = null;
         }
-        unlockClient.startChecking(context);
+        unlockClient.startChecking(context, phoneNumber);
         Log.e(TAG, "DESTROYED!");
     }
 }

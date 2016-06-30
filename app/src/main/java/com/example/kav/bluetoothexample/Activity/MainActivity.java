@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -22,6 +23,8 @@ import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.TextView;
@@ -32,6 +35,7 @@ import com.example.kav.bluetoothexample.UnlockService.AccelerometerUnlock;
 import com.example.kav.bluetoothexample.UnlockService.IUnlock;
 import com.example.kav.bluetoothexample.UnlockService.ScreenUnlock;
 
+import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
     public static final String ADDRESS_INTENT = "ADDRESS";
@@ -45,13 +49,15 @@ public class MainActivity extends AppCompatActivity {
     private TextView addressText = null;
     private TextView rssiText = null;
     private TextView powerText = null;
-    private FloatingActionButton buttonBigGraph = null;
     private BroadcastReceiver broadcastReceiverForGetRSSI = null;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 2;
+    private static final int REQUEST_PHONE_PERMISSION = 2;
     private RadioGroup radioGroup = null;
     private IUnlock iUnlock = null;
     private ProgressBar progressBar = null;
-    private CardView cardView = null;
+    private Button saveButton = null;
+    private EditText phoneEdit = null;
+    private String phoneNumber = "";
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -60,49 +66,77 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         initializeViewComponents();
-        checkBluetooth();
-        goToBluetoothRequestPermission();
+        checkPermissions();
         registerBroadcastReceiver();
 
+    }
+
+    private void checkPermissions() {
+        checkBluetooth();
+        goToPhonePermission();
+        goToBluetoothRequestPermission();
+        goToBluetoothPermission();
     }
 
     private void goToBluetoothRequestPermission() {
         int hasPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
         if (hasPermission == PackageManager.PERMISSION_GRANTED) {
-            startScanService();
+            // startScanService();
             return;
         }
         ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_BLUETOOTH_PERMISSION);
+    }
+
+    private void goToPhonePermission() {
+        int hasPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE);
+        if (hasPermission == PackageManager.PERMISSION_GRANTED) {
+            // startScanService();
+            return;
+        }
+        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.CALL_PHONE}, REQUEST_PHONE_PERMISSION);
+    }
+
+
+    private void goToBluetoothPermission() {
+        int hasPermission = ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH);
+        if (hasPermission == PackageManager.PERMISSION_GRANTED) {
+            // startScanService();
+            return;
+        }
+        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.BLUETOOTH}, REQUEST_ENABLE_BT);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         if (requestCode == REQUEST_BLUETOOTH_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                startScanService();
+                return;
+            //     startScanService();
         } else {
             Toast.makeText(this, "Not acsess!",
                     Toast.LENGTH_LONG).show();
         }
     }
 
+
     private void initializeViewComponents() {
         rssiText = (TextView) findViewById(R.id.textRssi);
         powerText = (TextView) findViewById(R.id.textPower);
         addressText = (TextView) findViewById(R.id.textAddress);
-        cardView = (CardView) findViewById(R.id.card1);
-        buttonBigGraph = (FloatingActionButton) findViewById(R.id.buttonBigGraph);
-        buttonBigGraph.setOnClickListener(new View.OnClickListener() {
+        saveButton = (Button) findViewById(R.id.saveButton);
+        phoneEdit = (EditText) findViewById(R.id.editText);
+        saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                /*Intent intent = new Intent(getBaseContext(), GraphActivity.class);
-                startActivity(intent);*/
-                Animation animRotateIn_icon = AnimationUtils.loadAnimation(getBaseContext(),
-                        R.anim.anim_activity);
-
-                buttonBigGraph.startAnimation(animRotateIn_icon);
+                String phoneNumberEdit = phoneEdit.getText().toString();
+                if (Pattern.matches("\\d{12}|\\d+", phoneNumberEdit)) {
+                    phoneEdit.setFocusable(false);
+                    phoneNumber = phoneNumberEdit;
+                    startScanService();
+                }
             }
         });
+
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         if (progressBar != null) {
             progressBar.setVisibility(View.GONE);
@@ -124,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                             iUnlock = new AccelerometerUnlock();
                             Log.e("Lock", "Accelerometer");
                         }
-                        iUnlock.startChecking(getBaseContext());
+                        iUnlock.startChecking(getBaseContext(), phoneNumber);
                         progressBar.setVisibility(View.GONE);
                     }
 
@@ -136,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void startScanService() {
         iUnlock = new AccelerometerUnlock();
-        iUnlock.startChecking(getBaseContext());
+        iUnlock.startChecking(getBaseContext(), phoneNumber);
     }
 
     private void registerBroadcastReceiver() {
